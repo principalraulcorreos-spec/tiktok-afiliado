@@ -30,7 +30,7 @@ Causa: la IA dibujó el producto distinto al vinculado (mármol: cocina completa
 - Código: repo clonado en `/home/claude/tiktok-afiliado` (`afiliado/`). Guías: `guia/MODO_REAL_REACCION.md` (actual) y `ESTANDAR_PROMPTS.md` (modo anterior).
 - Carpeta en la PC: `Downloads\<Producto>\` (fotos/, clips/, sfx/, FINAL.mp4, descripcion.txt).
 - Efectos de sonido: `C:\Users\Raúl\Videos\Sound FX` (en device_bash: `$HOME/mnt/Sound FX`).
-- Google Flow: 3 cuentas de 50 créditos/día cada una (principal se recarga ~10:12 pm). Veo 3.1 Lite = 10 créditos por clip de 8 s, modo Ingredientes con foto de referencia, 9:16, x1. Evitar 8–11 am (saturado).
+- Google Flow: 3 cuentas de 50 créditos/día cada una (principal se recarga ~10:12 pm). Veo 3.1 Lite = 10 créditos por clip de 8 s, 9:16, x1 (reacciones: texto a video, sin foto del producto). Evitar 8–11 am (saturado).
 - Navegador integrado con sesión de TikTok (Studio) y Flow abiertos.
 
 ## Etapa 1 — Investigación (sin créditos)
@@ -42,7 +42,7 @@ Salida: ficha de 6 líneas.
 ## Etapa 2 — Material (modo REAL + REACCIÓN)
 1. En la ficha (shop.tiktok.com/mx/pdp/...; si sale "Security Check", ✋ Raúl lo resuelve): sacar el video de la galería (`document.querySelector('video').currentSrc`) y 8–12 fotos (`~tplv-...-resize-webp:800:800.webp` → `origin-jpeg.jpeg`).
 2. Descargar con **XHR blob** (fetch está intervenido en la página) → `<a download>`. Chrome los guarda en Downloads a veces como `.tmp`: identificarlos por tamaño, pasarlos con device_stage_files y ordenarlos en `<Producto>/videos`, `/fotos`.
-3. Hacer una hoja de contacto del video (`fps=1/2,tile`) para elegir tramos y ver si trae subtítulos quemados (→ `quitar_abajo`).
+3. Hacer una hoja de contacto del video (`fps=1/2,tile`) para elegir tramos y ver si trae subtítulos quemados (→ `franja: [0.80, 1.0]`).
 4. Si la ficha no trae ningún video, el producto baja de prioridad (la política pide ≥3 s de contenido dinámico real).
 
 ## Etapa 3 — Guion (16–22 s)
