@@ -9,6 +9,13 @@ Instrucción para Claude: cuando Raúl mande solo un enlace de TikTok Shop (o "i
 - Ahorro de tokens: no narrar; capturas solo para verificar; usar `javascript_tool`/`find` antes que capturas; no repetir textos largos en el chat.
 - Respuestas en español, cortas.
 
+## Sincronización con GitHub (automática — Raúl solo usa el chat)
+Repo: `principalraulcorreos-spec/tiktok-afiliado` (rama main). Raúl NO decide entre chat y Code: todo se pide en el chat del proyecto y Claude se encarga.
+- **Al empezar cada chat:** `add_repo` del repo y `git clone --depth 1` → usar SIEMPRE el código y el protocolo del repo (no copias viejas).
+- **Si la petición cambia cómo funciona el sistema** (editor, prompts, scripts nuevos, reglas del protocolo): hacer el cambio en el clon, probarlo, `git commit` + `git push`, y actualizar también `claude/PROTOCOLO.md` del proyecto. Avisar en una línea: "Guardado en GitHub".
+- **Si la petición es operar** (hacer un video, investigar, publicar): no tocar el repo, salvo anotar el video en la bitácora de este archivo y hacer push.
+- Si el push falla por permisos: avisar a Raúl que revise la app de Claude en GitHub (Only select repositories → tiktok-afiliado).
+
 ## ⚠️ Reglas anti-sanción (oct-2026: 2 infracciones "Promoción de productos inconsistente", −15 pts c/u)
 Causa: la IA dibujó el producto distinto al vinculado (mármol: cocina completa forrada con 10 piezas = 1.8 m²; arenero: cambiaba de gris a blanco y de forma).
 - El producto en video debe coincidir EXACTO con la variante vinculada: forma, color, tamaño y cantidad. Revisar cuadro por cuadro contra las fotos de la ficha antes de entregar.
