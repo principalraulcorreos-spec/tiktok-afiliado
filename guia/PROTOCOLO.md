@@ -23,11 +23,11 @@ Causa: la IA dibujó el producto distinto al vinculado (mármol: cocina completa
 - Solo decir lo que viene literal en la ficha. Nada de "mi gato", "yo lo uso" ni testimonios.
 - Si un clip muestra el producto distinto: no se usa, aunque sea "casi igual".
 - Revisar los términos de afiliado de cada producto: algunas marcas prohíben contenido IA.
-- Formato más seguro: fotos reales de la ficha (`fotos.py`) + presentadora IA que solo habla en el gancho.
+- **Formato principal desde 7-nov-2026: REAL + REACCIÓN** (`guia/MODO_REAL_REACCION.md`): el producto sale solo en videos/fotos reales de la ficha; la presentadora IA va con fondo verde arriba a la derecha y NUNCA sostiene ni dibuja el producto.
 - Herramientas probadas: Google Flow (Veo 3.1 Lite) = baja fidelidad del producto. Dola AI (app, Seedance 2.0 Fast, 2 videos de 10 s/día gratis) = pendiente de validar fidelidad.
 
 ## Recursos
-- Código: proyecto → `codigo/*.py` (copiar a `/home/claude/tiktok_afiliado/afiliado/`). Guía de prompts: `ESTANDAR_PROMPTS.md`.
+- Código: repo clonado en `/home/claude/tiktok-afiliado` (`afiliado/`). Guías: `guia/MODO_REAL_REACCION.md` (actual) y `ESTANDAR_PROMPTS.md` (modo anterior).
 - Carpeta en la PC: `Downloads\<Producto>\` (fotos/, clips/, sfx/, FINAL.mp4, descripcion.txt).
 - Efectos de sonido: `C:\Users\Raúl\Videos\Sound FX` (en device_bash: `$HOME/mnt/Sound FX`).
 - Google Flow: 3 cuentas de 50 créditos/día cada una (principal se recarga ~10:12 pm). Veo 3.1 Lite = 10 créditos por clip de 8 s, modo Ingredientes con foto de referencia, 9:16, x1. Evitar 8–11 am (saturado).
@@ -39,27 +39,32 @@ Causa: la IA dibujó el producto distinto al vinculado (mármol: cocina completa
 3. Definir: problema que resuelve, 3 beneficios visibles, qué NO incluye (para EXCLUDE).
 Salida: ficha de 6 líneas.
 
-## Etapa 2 — Material
-1. Descargar 6–16 fotos reales del producto (XHR blob → `<a download>` a `Downloads\<Producto>\fotos`).
-2. Elegir 1 foto limpia de referencia para Flow.
+## Etapa 2 — Material (modo REAL + REACCIÓN)
+1. En la ficha (shop.tiktok.com/mx/pdp/...; si sale "Security Check", ✋ Raúl lo resuelve): sacar el video de la galería (`document.querySelector('video').currentSrc`) y 8–12 fotos (`~tplv-...-resize-webp:800:800.webp` → `origin-jpeg.jpeg`).
+2. Descargar con **XHR blob** (fetch está intervenido en la página) → `<a download>`. Chrome los guarda en Downloads a veces como `.tmp`: identificarlos por tamaño, pasarlos con device_stage_files y ordenarlos en `<Producto>/videos`, `/fotos`.
+3. Hacer una hoja de contacto del video (`fps=1/2,tile`) para elegir tramos y ver si trae subtítulos quemados (→ `quitar_abajo`).
+4. Si la ficha no trae ningún video, el producto baja de prioridad (la política pide ≥3 s de contenido dinámico real).
 
-## Etapa 3 — Guion (estructura viral 22–30 s)
-Problema (gancho 0–2 s) → descubrimiento → prueba/usos → oferta → carrito.
-- 3 clips de 8 s, presentadora latina IA fija (`PERSONA`: aretes de aro dorados + collar fino), 3 tomas por clip, lip-sync español mexicano, frases ≤17 palabras.
-- Honestidad: sin testimonios falsos ("yo lo uso", "me cambió la vida"), sin 100% ni resultados que no da.
-- SIN textos en pantalla, sin subtítulos y sin etiqueta "Contenido generado con IA" quemada (la etiqueta se activa en TikTok). Nunca decir ni mostrar el precio (cambia); usar "está en oferta".
-- SFX de la carpeta: cam_shutter (cortes de texto), riser→braams (revelación), whoosh (transiciones), melodic (oferta), ring (CTA).
-✋ Confirmación 1: mostrar guion en tabla corta.
+## Etapa 3 — Guion (18–24 s)
+Resultado más impactante primero (0–1.5 s) → problema → detalles reales → carrito.
+- 2 clips de presentadora de 8 s (gancho+problema / beneficios+"carrito naranja"), frases ≤17 palabras, solo lo que dice la ficha. Sin "yo lo uso" ni testimonios. Nunca el precio: "está en oferta".
+- Textos: gancho grande (0–1.9 s), captions chicos de 2–3 palabras sincronizados a su voz, CTA "CARRITO NARANJA ↓" al final. Nada más.
+- Tabla de escenas (tramo de video/foto, con duración de 1.0–1.6 s) → `timeline.json`.
+✋ Confirmación 1: guion + tabla de escenas.
 
-## Etapa 4 — Generación (30 créditos)
-- `prompts.construir_presentadora(...)` por clip. Flow: Ingredientes + foto, subir imagen con el truco de `HTMLInputElement.prototype.click` + File por XHR.
-- Escribir prompt con `find` ref y verificar longitud del contenteditable.
-- Descargar clips a `Downloads\<Producto>\clips`. QA (ESTANDAR_PROMPTS §5): si falla producto/física/texto generado → regenerar máximo 1 vez.
+## Etapa 4 — Presentadora (20 créditos)
+- `prompts.construir_reaccion(linea, gesto)` (gestos: sorpresa, explica, senala_abajo, duda_a_wow). Flow → **texto a video** (sin Ingredientes ni foto del producto), Veo 3.1 Lite, 9:16, x1.
+- QA: fondo verde parejo, sin objetos ni producto en las manos, cara estable, lip-sync, termina antes de 7 s. Si falla → regenerar máximo 1 vez.
+- Descargar a `<Producto>/presentadora/`. Ir juntando clips buenos en un **banco de reacciones** reutilizable (`Downloads/banco_reacciones/`).
 
-## Etapa 5 — Edición
-- Plantilla `codigo/editar_final.py`: `tramos_auto(8)` jump cuts 1.0/1.28 cada ~1.55 s, corte de silencios (detectar con `silencedetect=-35dB:d=0.25`), SFX en cada corte (sin textos ni etiqueta quemada), loudnorm −14 LUFS, 1080x1920.
+## Etapa 5 — Edición (`afiliado/secuencia.py`)
+- `python -m afiliado.secuencia <Producto>/timeline.json` (o `plan_auto()` y luego ajustar). Hace: escenas 1080x1920 con movimiento (zoom de golpe, Ken Burns, recortes que rebotan), chroma key de la presentadora arriba a la derecha que entra deslizándose, captions con efecto pop, whoosh/pop en cada corte, loudnorm −14 LUFS.
+- Debe imprimir movimiento real ≥50 %. QA en `MODO_REAL_REACCION.md`.
 - Copiar FINAL.mp4 + descripcion.txt a `Downloads\<Producto>\` con device_commit_files.
 ✋ Confirmación 2: enviar el video (SendUserFile).
+
+### Modo anterior (100 % IA con producto): DESCONTINUADO
+Solo si una herramienta reproduce el producto idéntico. Referencia: `ESTANDAR_PROMPTS.md`, `editar_final_plantilla.py`.
 
 ## Etapa 6 — Publicación (TikTok Studio web)
 1. `tiktok.com/tiktokstudio/upload`, viewport 1400x950 (`resize_window`).

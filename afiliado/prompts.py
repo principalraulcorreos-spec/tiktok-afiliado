@@ -321,3 +321,33 @@ def construir(p, formato: str, escenario: str | None = None, rng: random.Random 
         "caption": caption,
         "hashtags": " ".join(dict.fromkeys(tags)),
     }
+
+
+# ---------------------------------------------------------------------------
+# MODO "REAL + REACCIÓN" (nov-2026): la presentadora IA va con fondo verde y NUNCA sostiene ni
+# muestra el producto. El producto sale solo en material real (videos/fotos de la ficha).
+# Se recorta con chromakey en afiliado/secuencia.py y se pone arriba a la derecha.
+# ---------------------------------------------------------------------------
+PLANTILLA_REACCION = (
+    "Vertical 9:16 video, static locked-off camera at eye level, medium shot from the waist up of {persona}, "
+    "centered, standing in front of a perfectly flat, evenly lit, solid chroma-key green background (pure #00FF00), "
+    "no shadows on the background, nothing else in frame. "
+    "She reacts as if watching a video playing beside her: {gesto}. Big expressive facial reactions and hand gestures. "
+    "She speaks directly to the camera with natural lip-sync, excited and warm, in natural Mexican Spanish, says exactly: "
+    '"{linea}" She finishes speaking before the 7-second mark. No background music. '
+    "Her hands are empty: she holds nothing. "
+    "EXCLUDE: no products, no objects, no props, no phone, no text, no subtitles, no logos, no watermarks, "
+    "no green clothing or green accessories, no hair over the edges of the frame."
+)
+
+GESTOS_REACCION = {
+    "sorpresa": "at the start she gasps with surprise, eyes wide, hand on her chest, then nods impressed",
+    "explica": "she counts on her fingers while explaining, nodding with enthusiasm",
+    "senala_abajo": "at the end she points down and to the left with both index fingers, smiling",
+    "duda_a_wow": "she starts skeptical with one eyebrow raised, then her face lights up in amazement",
+}
+
+
+def construir_reaccion(linea: str, gesto: str = "sorpresa") -> str:
+    """Prompt para un clip de 8 s de la presentadora con fondo verde (sin producto)."""
+    return PLANTILLA_REACCION.format(persona=PERSONA, gesto=GESTOS_REACCION.get(gesto, gesto), linea=linea)

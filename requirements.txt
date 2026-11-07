@@ -2,3 +2,5 @@ requests>=2.31
 google-genai>=1.40        # solo para generar con Veo por API (fase 2)
 openpyxl>=3.1             # para importar métricas en .xlsx
 faster-whisper>=1.0       # opcional: subtítulos automáticos de tu voz
+rembg>=2.0                # opcional: producto sin fondo para escenas "recorte" (modo real + reacción)
+onnxruntime>=1.17         # lo usa rembg
