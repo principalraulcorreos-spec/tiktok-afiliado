@@ -365,6 +365,8 @@ def armar(tl: dict, base_dir: str | Path = ".") -> Path:
                 src = R(c["src"])
                 entradas += ["-ss", f"{c.get('ini', 0)}", "-t", f"{c['dur']}", "-i", src]
                 en, du = float(c["en"]), float(c["dur"])
+                if en < 0:          # negativo = contado desde el final
+                    en = max(D + en, 0)
                 x, y = _pos(pres.get("pos", "arriba_derecha"), pw, 0)
                 # entra deslizándose 0.22 s desde el borde
                 lado = "-" if pres.get("pos") == "arriba_izquierda" else "+"
@@ -379,7 +381,9 @@ def armar(tl: dict, base_dir: str | Path = ".") -> Path:
                 k += 1
                 dinamico += du * 0.5   # la presentadora cuenta como movimiento (aprox.)
 
-        textos = list(tl.get("textos", []))
+        # tiempos negativos = contados desde el final (p. ej. CTA: ini -2.2, fin 0 → últimos 2.2 s)
+        textos = [dict(x, ini=D + x["ini"] if x["ini"] < 0 else x["ini"],
+                       fin=D + x["fin"] if x["fin"] <= 0 else x["fin"]) for x in tl.get("textos", [])]
         if tl.get("voz") and tl.get("narracion"):
             textos += captions_de_voz(R(tl["voz"]), tl["narracion"], float(tl.get("voz_en", 0)))
         for f in tl.get("frases", []):
