@@ -1,0 +1,21 @@
+# Secretos
+.env
+*.token
+*.pkce
+data/tiktok_token*
+# Medios pesados (viven en Downloads / Google Drive)
+*.mp4
+*.mov
+*.wav
+*.mp3
+*.m4a
+*.jpg
+*.jpeg
+*.png
+data/clips/
+data/voces/
+data/listos/
+# Python
+__pycache__/
+*.pyc
+.venv/
