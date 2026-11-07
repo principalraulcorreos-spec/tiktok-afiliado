@@ -52,13 +52,16 @@ Resultado más impactante primero (0–1.5 s) → problema → detalles reales �
 - Tabla de escenas: tramos de video de 1.0–1.6 s y fotos completas de ≤1.2 s, en el orden del guion → `timeline.json`. Las fotos van completas, nunca recortadas.
 ✋ Confirmación 1: narración + tabla de escenas.
 
-## Etapa 4 — Voz y presentadora (0–20 créditos)
-1. **Voz:** Google AI Studio → Generate speech, voz `Leda`, prompt = `voz.instruccion_estudio(narracion)` → descargar `voz.wav` (o `python -m afiliado.voz` con GEMINI_API_KEY).
-2. **Presentadora muda** del **banco de reacciones** (`Downloads/banco_reacciones/`): elegir 1–2 clips distintos a los del último video. Si el banco tiene menos de 8 clips, generar más en Flow con `prompts.construir_reaccion(None, gesto)` (texto a video, Veo 3.1 Lite, 9:16, x1, 10 créditos c/u). QA: verde parejo, manos vacías, sin producto, cara estable.
-3. Con narrador, la presentadora va **muda** (solo reacciona). Con el banco lleno, el costo por video es 0 créditos.
+## Etapa 4 — Presentadora que narra (24 créditos)
+La voz que narra es la de la presentadora (lip-sync de Veo). La narración de la Etapa 3 se parte en 3 frases de ≤17 palabras.
+1. **Clip 1:** Flow → Video, 9:16, x1, Veo 3.1 Lite, **sin ingredientes** (10 créditos). Prompt: `prompts.construir_reaccion(frase1, "sorpresa")`.
+2. **Clips 2 y 3:** "Agregar ingredientes" → el clip 1 → "Agregar a la instrucción". Flow cambia solo a Omni 1.2 Flash; dejar **360p** (7 créditos cada uno; 720p cuesta 21). Prompt: "Same woman, same white t-shirt, same framing and same solid chroma-key green background as the reference video…" + frase 2 o 3 (gestos: explica / señala abajo a la izquierda). Así sale la misma mujer en los 3 clips.
+3. Descargar: abrir el clip → "Descargar contenido multimedia" → 720p (Tamaño original) / el tamaño que tenga. Se guardan en Downloads con nombre en inglés → device_stage_files → `<Producto>/presentadora/r1..r3.mp4`.
+4. QA: verde parejo, manos vacías, sin producto, la misma cara en los 3 clips, dice la frase completa.
+- Voz de narrador aparte (Gemini TTS en AI Studio): **requiere clave de API con facturación** → no usar sin aprobación de Raúl. Si algún día se activa: `afiliado/voz.py` y presentadora muda (`construir_reaccion(None, gesto)`).
 
 ## Etapa 5 — Edición (`afiliado/secuencia.py`)
-- `python -m afiliado.secuencia <Producto>/timeline.json` con `"voz"`, `"narracion"` y `"presentadora"`. Ajusta solo las escenas a la duración de la voz, sincroniza los captions con las pausas de la voz, pone a la presentadora arriba a la derecha con chroma key, difumina los subtítulos del vendedor (`franja`), agrega whoosh/pop en los cortes y normaliza a −14 LUFS.
+- `python -m afiliado.secuencia <Producto>/timeline.json` con `"presentadora"` (3 clips seguidos con audio) y `"frases"` (captions de lo que dice cada clip). La presentadora habla todo el video arriba a la derecha; pone a la presentadora arriba a la derecha con chroma key, difumina los subtítulos del vendedor (`franja`), agrega whoosh/pop en los cortes y normaliza a −14 LUFS.
 - Revisar 5 cuadros: fotos completas, sin subtítulos del vendedor, la presentadora no tapa el producto, captions en tiempo, ≥50 % de movimiento real.
 - Copiar FINAL.mp4 + descripcion.txt a `Downloads\<Producto>\` con device_commit_files.
 ✋ Confirmación 2: enviar el video (SendUserFile).
@@ -80,7 +83,7 @@ Solo si una herramienta reproduce el producto idéntico. Referencia: `ESTANDAR_P
 | Hora | Qué | Quién |
 |---|---|---|
 | 21:00 | Etapas 1–3 de 2 productos (investigación, material, narración y escenas) | Claude → ✋ Raúl aprueba el guion |
-| 22:15 | Etapa 4: voz y reacciones faltantes (los créditos de Flow se recargan ~22:12) | Claude |
+| 22:15 | Etapa 4: 3 clips de la presentadora por video (24 créditos; los créditos de Flow se recargan ~22:12; 2 videos = 48 de 50) | Claude |
 | 22:30 | Etapa 5: edición y QA | Claude → ✋ Raúl revisa el video |
 | 12:30 y 19:00 | Etapa 6: publicar (1 video por horario) | Claude prepara, Raúl da "Publicar" |
 | Domingo | Métricas de la semana (`metrics.py`), ganchos que retienen más, rellenar el banco de reacciones | Claude → ✋ cambios de estrategia |
@@ -95,3 +98,4 @@ Solo si una herramienta reproduce el producto idéntico. Referencia: `ESTANDAR_P
 | 2026-10-19 | Paneles mármol adhesivo 10 pz | 1733217540882335646 | 20 s | Publicado → sancionado (cocina completa forrada, v1 con textos) |
 | 2026-10-19 | Hidrolavadora IRONHOOF | 1733359632838526590 | 19 s + 2 var. | Entregado, no subir (demostración simulada) |
 | 2026-10-19 | Arenero cerrado UNA MASCOTA | 1731244617720432440 | 20 s + 4 var. | Var. B publicada → sancionada (color/forma cambian) |
+| 2026-11-07 | Cortinas Blackout 2 Paneles (modo REAL + REACCIÓN v1) | 1735698904811471953 | 20.8 s | Entregado, 24 créditos |

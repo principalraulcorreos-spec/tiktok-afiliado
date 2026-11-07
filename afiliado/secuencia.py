@@ -302,6 +302,21 @@ def _drawtext(fuente: str, tmp: Path, nombre: str, texto: str, a: float, b: floa
 
 
 # --------------------------------------------------------------------------- presentadora
+def color_fondo(src: str, t: float = 1.0) -> str:
+    """Color real del fondo verde (promedio de las 2 esquinas de arriba). Veo no da #00FF00 puro."""
+    vals = []
+    for x in ("8", "iw-48"):
+        r = subprocess.run(["ffmpeg", "-v", "error", "-ss", str(t), "-i", src, "-frames:v", "1", "-vf",
+                            f"crop=40:40:{x}:8,scale=1:1", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
+                           capture_output=True)
+        if len(r.stdout) >= 3:
+            vals.append(r.stdout[:3])
+    if not vals:
+        return "0x00FF00"
+    rgb = [sum(v[i] for v in vals) // len(vals) for i in range(3)]
+    return "0x%02X%02X%02X" % tuple(rgb)
+
+
 def _pos(pos: str, pw: int, ph: int) -> tuple[str, str]:
     m = 36
     if pos == "arriba_izquierda":
@@ -321,6 +336,19 @@ def armar(tl: dict, base_dir: str | Path = ".") -> Path:
     salida.parent.mkdir(parents=True, exist_ok=True)
     fuente = _fuente()
 
+    pres0 = tl.get("presentadora")
+    if pres0 and not tl.get("voz") and all(c.get("en", "auto") == "auto" for c in pres0["clips"]):
+        # la presentadora narra: sus clips van seguidos y el video dura lo que ella habla
+        t, clips = float(pres0.get("inicio", 0.0)), []
+        for c in pres0["clips"]:
+            clips.append(dict(c, en=round(t, 3)))
+            t += float(c["dur"])
+        objetivo = t + float(tl.get("cola", 0.5))
+        suma = sum(float(e["dur"]) for e in tl["escenas"])
+        f = objetivo / suma
+        tl = dict(tl, presentadora=dict(pres0, clips=clips),
+                  escenas=[dict(e, dur=round(float(e["dur"]) * f, 2)) for e in tl["escenas"]])
+        print(f"Escenas ajustadas a la presentadora: {suma:.1f} s → {objetivo:.1f} s")
     if tl.get("voz") and tl.get("ajustar_a_voz", True):
         objetivo = _dur(R(tl["voz"])) + float(tl.get("voz_en", 0)) + float(tl.get("cola", 0.7))
         suma = sum(float(e["dur"]) for e in tl["escenas"])
@@ -359,10 +387,10 @@ def armar(tl: dict, base_dir: str | Path = ".") -> Path:
         if pres:
             pw = int(W * float(pres.get("ancho", 0.42)))
             y0, y1 = pres.get("recorte_y", [0.0, 0.62])
-            verde = pres.get("verde", "0x00FF00")
-            sim, suav = pres.get("similitud", 0.16), pres.get("suavizado", 0.08)
+            sim, suav = pres.get("similitud", 0.08), pres.get("suavizado", 0.03)
             for j, c in enumerate(pres["clips"]):
                 src = R(c["src"])
+                verde = pres.get("verde") or color_fondo(src)
                 entradas += ["-ss", f"{c.get('ini', 0)}", "-t", f"{c['dur']}", "-i", src]
                 en, du = float(c["en"]), float(c["dur"])
                 if en < 0:          # negativo = contado desde el final
@@ -384,10 +412,32 @@ def armar(tl: dict, base_dir: str | Path = ".") -> Path:
         # tiempos negativos = contados desde el final (p. ej. CTA: ini -2.2, fin 0 → últimos 2.2 s)
         textos = [dict(x, ini=D + x["ini"] if x["ini"] < 0 else x["ini"],
                        fin=D + x["fin"] if x["fin"] <= 0 else x["fin"]) for x in tl.get("textos", [])]
+        # captions de lo que dice la presentadora en cada clip (sincronizados con las pausas de su audio)
+        if pres and not tl.get("voz"):
+            for c in pres["clips"]:
+                if c.get("texto"):
+                    en = float(c["en"]) if float(c["en"]) >= 0 else D + float(c["en"])
+                    with tempfile.TemporaryDirectory() as t2:
+                        wav = Path(t2) / "a.wav"
+                        _run(["ffmpeg", "-y", "-v", "error", "-ss", f"{c.get('ini', 0)}", "-t", f"{c['dur']}",
+                              "-i", R(c["src"]), "-vn", "-ac", "1", "-ar", "16000", str(wav)])
+                        textos += captions_de_voz(str(wav), c["texto"], en)
         if tl.get("voz") and tl.get("narracion"):
             textos += captions_de_voz(R(tl["voz"]), tl["narracion"], float(tl.get("voz_en", 0)))
         for f in tl.get("frases", []):
             textos += captions_de_frase(f["t"], f["ini"], f["fin"], f.get("palabras", 3))
+        # captions que choquen con el gancho o el CTA: se recortan o se quitan (nunca dos textos encimados)
+        grandes = [(x["ini"], x["fin"]) for x in textos if x.get("estilo") in ("gancho", "cta")]
+        limpios = []
+        for x in textos:
+            if x.get("estilo", "caption") == "caption":
+                for a_, b_ in grandes:
+                    if x["ini"] < b_ and x["fin"] > a_:
+                        x = dict(x, ini=max(x["ini"], b_)) if x["ini"] >= a_ else dict(x, fin=min(x["fin"], a_))
+                if x["fin"] - x["ini"] < 0.25:
+                    continue
+            limpios.append(x)
+        textos = limpios
         dt = []
         for i, tx in enumerate(textos):
             dt += _drawtext(fuente, tmp, f"t{i}", tx["t"], float(tx["ini"]), float(tx["fin"]),

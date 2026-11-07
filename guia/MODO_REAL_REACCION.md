@@ -2,6 +2,8 @@
 
 Formato principal desde el 7-nov-2026. Sustituye al video 100 % IA, que causó 2 sanciones por "promoción inconsistente".
 
+**Voz:** la narra la presentadora (3 clips con lip-sync; el 1 con Veo 3.1 Lite y el 2 y el 3 con el clip 1 como ingrediente para que salga la misma mujer, 24 créditos en total). El TTS de AI Studio pide facturación.
+
 **Regla de oro:** el producto sale **solo** en material real de la ficha (videos y fotos del vendedor). La IA solo hace de presentadora con fondo verde: reacciona, habla y señala. Nunca sostiene ni dibuja el producto.
 
 ## Por qué (investigación 7-nov-2026)
@@ -55,7 +57,7 @@ o `python -m afiliado.secuencia Downloads/<Producto>/timeline.json`.
 - `voz` + `narracion`: las escenas se ajustan solas a la duración de la voz y los captions se sincronizan con sus pausas.
 - `punch: true`: zoom de golpe (úsalo en el primer tramo y cada ~4 cortes).
 - `presentadora.recorte_y: [0, 0.62]`: usa solo el busto del clip; `ancho: 0.42` del video.
-- `presentadora.similitud`: súbelo (0.18–0.25) si queda borde verde y bájalo si se borra el pelo o la cara.
+- `presentadora.similitud` (0.08 por defecto): el color del verde se detecta solo (Veo da ~#3F9D3E, no #00FF00). Con 0.13 o más la blusa blanca y la cara se vuelven transparentes; súbelo poco a poco solo si queda borde verde.
 - Con `voz`, la presentadora va muda (`audio: false` por defecto). Sin voz, `frases` → captions de lo que ella dice.
 
 ## QA antes de entregar
@@ -72,3 +74,5 @@ o `python -m afiliado.secuencia Downloads/<Producto>/timeline.json`.
 | Fecha | Producto | Versión | Resultado | Aprendizaje |
 |---|---|---|---|---|
 | 2026-11-07 | Cortinas Blackout | v1 | Fotos se veían recortadas (zoom dentro de la foto) y los videos perdían los lados | Fotos completas sobre fondo desenfocado; video completo con franja difuminada en vez de recortar |
+| 2026-11-07 | Cortinas Blackout | v2 | Chroma: con #00FF00 no recortaba (quedaba gris); con 0.13 se transparentaba la cara | Color detectado + similitud 0.08 = limpio. Gancho y captions se encimaban → los captions se quitan donde hay gancho/CTA |
+| 2026-11-07 | Cortinas Blackout | v2 | La presentadora tapa la esquina de arriba a la derecha de las fotos con texto | Pendiente: elegir fotos sin texto arriba a la derecha o bajar la foto |
