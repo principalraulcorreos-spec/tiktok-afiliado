@@ -1,0 +1,3 @@
+fecha,producto,version,video,duracion_s,lufs,true_peak_db,cortes_por_s,congelado_pct,negro_s,verde_residual_pct,mb,aprobado
+2026-11-07,Cortinas_Blackout,v2 (antes: foto bajo la presentadora),FINAL_v2_antes.mp4,20.83,-14.0,-1.4,0.96,0.0,0,0.0,10.69,True
+2026-11-07,Cortinas_Blackout,v3 (fotos en zona libre),FINAL.mp4,20.83,-14.0,-1.4,0.96,0.0,0,0.0,10.78,True

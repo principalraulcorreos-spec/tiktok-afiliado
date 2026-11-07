@@ -5,7 +5,6 @@ Se usa para alargar un clip de IA (clip 8 s + fotos 6-8 s) o como video de respa
 """
 from __future__ import annotations
 
-import subprocess
 import tempfile
 from pathlib import Path
 

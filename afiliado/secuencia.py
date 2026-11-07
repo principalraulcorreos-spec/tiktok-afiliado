@@ -138,11 +138,14 @@ def _escena_foto(e: dict, out: Path) -> None:
     mov = e.get("mov", "in")
     k = {"in": f"(0.94+0.08*t/{dur})", "out": f"(1.02-0.08*t/{dur})"}.get(mov, "0.98")
     dx = {"izq": f"+40-80*t/{dur}", "der": f"-40+80*t/{dur}"}.get(mov, "")
+    # con presentadora arriba, la foto baja a la zona libre (y >= 720) para que ella no tape su texto
+    y = f"max((H-h)/2-60\\,{int(e['debajo'])})" if e.get("debajo") else "(H-h)/2-60"
+    ancho = int(e.get("ancho_foto", W))
     fc = (f"[0:v]split[a][b];[a]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},boxblur=60:4,"
           f"eq=brightness=-0.28:saturation=0.8,loop=-1:1,trim=end_frame={n},setpts=N/{FPS}/TB[bg];"
-          f"[b]scale={W}:-2,loop=-1:1,trim=end_frame={n},setpts=N/{FPS}/TB,"
-          f"scale=w='trunc({W}*{k}/2)*2':h=-2:eval=frame[fg];"
-          f"[bg][fg]overlay=x='(W-w)/2{dx}':y='(H-h)/2-60':shortest=1,setsar=1,fps={FPS},format=yuv420p[v]")
+          f"[b]scale={ancho}:-2,loop=-1:1,trim=end_frame={n},setpts=N/{FPS}/TB,"
+          f"scale=w='trunc({ancho}*{k}/2)*2':h=-2:eval=frame[fg];"
+          f"[bg][fg]overlay=x='(W-w)/2{dx}':y='{y}':shortest=1,setsar=1,fps={FPS},format=yuv420p[v]")
     _run(["ffmpeg", "-y", "-v", "error", "-loop", "1", "-t", f"{dur + 0.5}", "-i", str(e["src"]),
           "-filter_complex", fc, "-map", "[v]", "-frames:v", str(n), *ENC, str(out)])
 
@@ -322,7 +325,7 @@ def _pos(pos: str, pw: int, ph: int) -> tuple[str, str]:
     if pos == "arriba_izquierda":
         return f"{m}", "200"
     if pos == "abajo_centro":
-        return f"(W-w)/2", f"H-h-260"
+        return "(W-w)/2", "H-h-260"
     return f"W-w-{m}", "200"   # arriba_derecha: debajo de la barra superior de TikTok
 
 
@@ -363,6 +366,9 @@ def armar(tl: dict, base_dir: str | Path = ".") -> Path:
         dinamico = 0.0
         for i, e in enumerate(tl["escenas"]):
             e = dict(e, src=R(e["src"]))
+            if e["tipo"] == "foto" and pres0 and pres0.get("pos", "arriba_derecha").startswith("arriba"):
+                e.setdefault("debajo", 700)
+                e.setdefault("ancho_foto", 1000)
             if e.get("fondo"):
                 e["fondo"] = R(e["fondo"])
             o = tmp / f"e{i:03d}.mp4"

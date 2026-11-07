@@ -75,4 +75,11 @@ o `python -m afiliado.secuencia Downloads/<Producto>/timeline.json`.
 |---|---|---|---|---|
 | 2026-11-07 | Cortinas Blackout | v1 | Fotos se veían recortadas (zoom dentro de la foto) y los videos perdían los lados | Fotos completas sobre fondo desenfocado; video completo con franja difuminada en vez de recortar |
 | 2026-11-07 | Cortinas Blackout | v2 | Chroma: con #00FF00 no recortaba (quedaba gris); con 0.13 se transparentaba la cara | Color detectado + similitud 0.08 = limpio. Gancho y captions se encimaban → los captions se quitan donde hay gancho/CTA |
-| 2026-11-07 | Cortinas Blackout | v2 | La presentadora tapa la esquina de arriba a la derecha de las fotos con texto | Pendiente: elegir fotos sin texto arriba a la derecha o bajar la foto |
+| 2026-11-07 | Cortinas Blackout | v3 | La presentadora tapaba la esquina superior derecha de las fotos | Fotos bajan a la zona libre: solape 13.2 % → 0 % |
+
+## Comandos rápidos (nov-2026)
+- `python -m afiliado video Downloads/<Producto>/timeline.json` → arma el video y corre el QA (escribe `qa.json` y `qa_hoja.jpg`).
+- `python -m afiliado qa <video> --registro guia/metricas_videos.csv` → solo el QA, y lo guarda en el histórico.
+- `python -m pytest -q tests` → pruebas (antes de cualquier cambio al código).
+- `python scripts/auditoria.py` → estado del sistema (lo usa la tarea diaria). Historial de mejoras: `guia/EVOLUCION.md`.
+- Las fotos se colocan solas debajo de la presentadora (y ≥ 700, ancho 1000) para que no tape sus textos.

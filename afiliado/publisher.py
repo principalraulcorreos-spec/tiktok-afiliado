@@ -14,7 +14,6 @@ import base64
 import hashlib
 import json
 import math
-import os
 import secrets
 import time
 import urllib.parse

@@ -140,7 +140,7 @@ def importar_archivo(ruta: str | Path, fuente: str = "csv", fecha: str | None = 
                 f"INSERT INTO metricas ({','.join(cols)}) VALUES ({','.join('?' for _ in cols)}) "
                 f"ON CONFLICT(video_id, fecha, fuente) DO UPDATE SET "
                 + ",".join(f"{k}=excluded.{k}" for k in vals) if vals else
-                f"INSERT OR IGNORE INTO metricas (video_id, fecha, fuente) VALUES (?,?,?)",
+                "INSERT OR IGNORE INTO metricas (video_id, fecha, fuente) VALUES (?,?,?)",
                 (video_id, fecha, fuente, *vals.values()))
             ok += 1
     return ok, sin

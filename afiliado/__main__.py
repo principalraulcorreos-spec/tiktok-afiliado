@@ -10,7 +10,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from . import db
-from .config import CLIPS_DIR, KITS_DIR, VOICES_DIR
+from .config import CLIPS_DIR, VOICES_DIR
 
 CAMPOS_PRODUCTO = ["tiktok_id", "nombre", "nombre_corto", "url", "categoria", "precio", "comision_pct", "ventas_30d", "ventas_7d",
                    "ventas_7d_prev", "calificacion", "num_resenas", "videos_afiliados", "demostrable",
@@ -118,8 +118,27 @@ def main(argv=None):
     a.add_argument("--mes", help="AAAA-MM (por defecto, el mes anterior)")
     a = sub.add_parser("dia", help="Rutina automática: planear mañana + (generar por API) + editar lo que tenga clip")
     a.add_argument("--api", action="store_true", help="generar clips con Veo API")
+    a = sub.add_parser("video", help="Modo REAL+REACCIÓN: arma el video desde <Producto>/timeline.json y corre el QA")
+    a.add_argument("timeline")
+    a = sub.add_parser("qa", help="QA objetivo de un video (duración, LUFS, cortes, congelado, verde residual)")
+    a.add_argument("video")
+    a.add_argument("--registro", default="guia/metricas_videos.csv")
 
     args = ap.parse_args(argv)
+    if args.cmd in ("video", "qa"):           # no necesitan la base de datos
+        from . import qa, secuencia
+        if args.cmd == "video":
+            t = Path(args.timeline)
+            out = secuencia.armar(json.loads(t.read_text(encoding="utf-8")), t.parent)
+            m = qa.medir(out)
+            qa.hoja(out, out.parent / "qa_hoja.jpg")
+        else:
+            out = Path(args.video)
+            m = qa.medir(out)
+            qa.registrar(m, args.registro, out.parent.name)
+        (out.parent / "qa.json").write_text(json.dumps(m, ensure_ascii=False, indent=1), encoding="utf-8")
+        print(json.dumps(m["evaluacion"], ensure_ascii=False), "→", "APROBADO" if m["aprobado"] else "REVISAR")
+        return
     db.init()
 
     if args.cmd == "init":
