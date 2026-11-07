@@ -1,6 +1,6 @@
 # EVOLUCIÓN — mejora continua del sistema TikTok Shop
 
-Registro histórico de auditorías, experimentos y mejoras. La tarea programada "Mejora diaria TikTok Shop" (16:23 CDMX) lo lee y lo actualiza en cada ejecución. Cada cambio vive en Git: para revertir, `git revert <commit>`.
+Registro histórico de auditorías, experimentos y mejoras. La tarea programada "Mejora diaria TikTok Shop" (16:23 CDMX) lo lee y lo actualiza en cada ejecución. Cada cambio vive en Git: para revertir, `git revert <commit>`. La rama `estable` siempre apunta a la última versión validada (la tarea solo la mueve cuando pruebas y QA pasan).
 
 ## Reglas del ciclo
 1. **Una mejora por ciclo**, con hipótesis, métrica y prueba antes/después. Nunca dos cambios a la vez sobre la misma métrica.
