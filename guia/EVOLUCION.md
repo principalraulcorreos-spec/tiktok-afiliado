@@ -2,6 +2,10 @@
 
 Registro histórico de auditorías, experimentos y mejoras. La tarea programada "Mejora diaria TikTok Shop" (16:23 CDMX) lo lee y lo actualiza en cada ejecución. Cada cambio vive en Git: para revertir, `git revert <commit>`. La rama `estable` siempre apunta a la última versión validada (la tarea solo la mueve cuando pruebas y QA pasan).
 
+## Tarea programada
+- **Mejora diaria TikTok Shop**: todos los días a las 16:23 (CDMX), en la nube, con aprobación automática. Hace un ciclo: estabilidad → métricas → una mejora técnica validada → registro aquí → notificación al celular.
+- Límite actual: corre en la nube, **sin acceso a la PC**. No puede leer TikTok Studio, el Centro de afiliados ni `Downloads`. Las métricas de rendimiento se capturan en los chats de producción (`python -m afiliado qa ... --registro` y `guia/metricas_rendimiento.csv`) o se suben al repo.
+
 ## Reglas del ciclo
 1. **Una mejora por ciclo**, con hipótesis, métrica y prueba antes/después. Nunca dos cambios a la vez sobre la misma métrica.
 2. **Nada se fusiona a `main` sin** `pytest` en verde, pyflakes limpio y, si toca el video, `python -m afiliado qa` aprobado y sin empeorar ninguna métrica.
@@ -26,6 +30,7 @@ Registro histórico de auditorías, experimentos y mejoras. La tarea programada 
 | 2026-11-07 | Calidad | Pruebas automáticas (`tests/test_secuencia.py`), incluido un control negativo de chroma | 0 pruebas | 4 pruebas, 17 s | `pytest -q` | ✅ |
 | 2026-11-07 | Calidad | QA objetivo (`afiliado/qa.py`, `python -m afiliado qa/video`) | revisión solo a ojo | 7 métricas con umbral + hoja de contacto + histórico CSV | `metricas_videos.csv` | ✅ |
 | 2026-11-07 | Código | Limpieza de imports sin usar y f-strings vacíos | 6 avisos de pyflakes | 0 | `pyflakes` | ✅ |
+| 2026-11-07 | Proceso | Tarea programada diaria (16:23 CDMX) y rama `estable` como punto de recuperación | sin ciclo de mejora | 1 ciclo/día | `list_triggers`: activa, siguiente 2026-11-07 16:23 | ✅ |
 | 2026-11-07 | Mejora | Chroma con el color detectado + similitud 0.08 | recuadro gris o cara transparente | 0.0 % de verde residual | QA | ✅ |
 
 ## Primera auditoría (2026-11-07)
