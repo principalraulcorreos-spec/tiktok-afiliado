@@ -9,8 +9,8 @@ timeline.json (rutas relativas a la carpeta del timeline):
 {
   "salida": "FINAL.mp4",
   "escenas": [                                   # fondo a pantalla completa, en orden
-    {"tipo": "video", "src": "videos/demo.mp4", "ini": 2.0, "dur": 1.6, "vel": 1.0, "zoom": 1.0, "punch": true,
-     "quitar_abajo": 0.2},                       # quitar_abajo: recorta subtítulos quemados del vendedor
+    {"tipo": "video", "src": "videos/demo.mp4", "ini": 2.0, "dur": 1.6, "vel": 1.0, "punch": true,
+     "franja": [0.82, 0.95]},                    # franja: difumina subtítulos quemados del vendedor
     {"tipo": "foto",  "src": "fotos/1.jpg", "dur": 1.0, "mov": "in"},          # mov: in | out | izq | der
     {"tipo": "recorte", "src": "recortes/1.png", "dur": 1.2, "fondo": "fotos/1.jpg"}  # producto sin fondo que entra con rebote
   ],
@@ -21,8 +21,9 @@ timeline.json (rutas relativas a la carpeta del timeline):
     "recorte_y": [0.0, 0.62],                    # parte del clip que se usa (0=arriba, 1=abajo): busto
     "clips": [{"src": "presentadora/r1.mp4", "ini": 0.0, "dur": 3.0, "en": 0.0, "audio": true}]
   },
-  "voz": "voz.mp3",                              # opcional: narración (edge-tts u otra)
-  "voz_en": 0.0,
+  "voz": "voz.wav",                              # narración (Gemini TTS de AI Studio). Con voz, la presentadora va muda
+  "narracion": "texto exacto de la voz",         # → captions sincronizados automáticos
+  "voz_en": 0.0, "ajustar_a_voz": true,          # las escenas se estiran/encogen para durar lo que la voz
   "textos": [{"t": "¿TE DESPIERTA EL SOL?", "ini": 0.0, "fin": 1.8, "estilo": "gancho"},
              {"t": "triple capa", "ini": 5.0, "fin": 6.4, "estilo": "caption"}],
   "frases": [{"t": "Mira lo que encontré para tu recámara", "ini": 0.3, "fin": 2.6}],  # → captions automáticos
@@ -96,46 +97,52 @@ _FIT = (f"split[a][b];[a]scale={W}:{H}:force_original_aspect_ratio=increase,crop
         f"[bg][fg]overlay=(W-w)/2:(H-h)/2")
 
 
-def _es_vertical(p, qa: float = 0.0) -> bool:
+def _es_vertical(p) -> bool:
     r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height",
                         "-of", "csv=p=0", str(p)], capture_output=True, text=True)
     try:
         w, h = map(int, r.stdout.strip().split(",")[:2])
-        return h * (1 - qa) / w > 1.3   # casi vertical: se llena la pantalla (recorta lados)
+        return h / w > 1.7   # 9:16 real: llena la pantalla sin perder casi nada
     except Exception:
         return False
 
 
 # --------------------------------------------------------------------------- escenas (fondo)
 def _escena_video(e: dict, out: Path) -> None:
+    """Tramo de video real. Nunca recorta los lados: si no es 9:16 va completo sobre fondo desenfocado.
+    `franja`: [y0, y1] (fracción de alto) que se difumina para tapar subtítulos quemados del vendedor."""
     vel = float(e.get("vel", 1.0))
     dur = float(e["dur"])
-    z = float(e.get("zoom", 1.0))
-    qa = float(e.get("quitar_abajo", 0))  # recorta subtítulos quemados del vendedor (fracción de abajo)
-    base = (f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H}" if _es_vertical(e["src"], qa)
+    base = (f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H}" if _es_vertical(e["src"])
             else _FIT)
     punch = ""
-    if e.get("punch"):  # zoom de golpe que se relaja en 0.35 s
-        punch = (f",scale=w='trunc(iw*({z}+0.12*max(0,1-t/0.35))/2)*2':h='trunc(ih*({z}+0.12*max(0,1-t/0.35))/2)*2'"
+    if e.get("punch"):  # zoom de golpe que se relaja en 0.35 s (el cuadro completo, sin perder bordes al final)
+        punch = (",scale=w='trunc(iw*(1+0.10*max(0\\,1-t/0.35))/2)*2':h='trunc(ih*(1+0.10*max(0\\,1-t/0.35))/2)*2'"
                  f":eval=frame,crop={W}:{H}")
-    elif z != 1.0:
-        punch = f",scale={int(W * z)}:{int(H * z)},crop={W}:{H}"
-    pre = f"crop=iw:ih*{1 - qa:.3f}:0:0," if qa else ""
-    vf = f"[0:v]setpts=(PTS-STARTPTS)/{vel},{pre}{base}{punch},fps={FPS},setsar=1,format=yuv420p[v]"
+    franja = ""
+    if e.get("franja"):
+        y0, y1 = e["franja"]
+        hh = int(H * (y1 - y0)) // 2 * 2
+        franja = (f",split[m][f];[f]crop={W}:{hh}:0:{int(H * y0)},boxblur=22:4[fb];"
+                  f"[m][fb]overlay=0:{int(H * y0)}")
+    vf = (f"[0:v]setpts=(PTS-STARTPTS)/{vel},{base}{franja}{punch},fps={FPS},setsar=1,format=yuv420p[v]")
     _run(["ffmpeg", "-y", "-v", "error", "-ss", f"{e.get('ini', 0)}", "-t", f"{dur * vel:.3f}", "-i", str(e["src"]),
           "-filter_complex", vf, "-map", "[v]", "-an", "-t", f"{dur:.3f}", *ENC, str(out)])
 
 
 def _escena_foto(e: dict, out: Path) -> None:
+    """Foto de la ficha COMPLETA (nunca se recorta: suelen traer texto en los bordes), centrada sobre un
+    fondo muy desenfocado y oscuro, con zoom suave de la foto entera (mov: in | out) o deslizamiento (izq | der)."""
     dur = float(e["dur"])
     n = max(int(dur * FPS), 1)
     mov = e.get("mov", "in")
-    zexp = {"in": f"1+0.18*on/{n}", "out": f"1.18-0.18*on/{n}"}.get(mov, "1.12")
-    xexp = {"izq": f"(iw-iw/zoom)*(1-on/{n})", "der": f"(iw-iw/zoom)*on/{n}"}.get(mov, "iw/2-(iw/zoom/2)")
-    fc = (f"[0:v]split[a][b];[a]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},boxblur=30:2,"
-          f"eq=brightness=-0.08,loop=-1:1,trim=end_frame={n}[bg];"
-          f"[b]scale=2160:-1,zoompan=z='{zexp}':x='{xexp}':y='ih/2-(ih/zoom/2)':d={n}:s={W}x{W}:fps={FPS}[fg];"
-          f"[bg][fg]overlay=0:(H-h)/2-80:shortest=1,setsar=1,format=yuv420p[v]")
+    k = {"in": f"(0.94+0.08*t/{dur})", "out": f"(1.02-0.08*t/{dur})"}.get(mov, "0.98")
+    dx = {"izq": f"+40-80*t/{dur}", "der": f"-40+80*t/{dur}"}.get(mov, "")
+    fc = (f"[0:v]split[a][b];[a]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},boxblur=60:4,"
+          f"eq=brightness=-0.28:saturation=0.8,loop=-1:1,trim=end_frame={n},setpts=N/{FPS}/TB[bg];"
+          f"[b]scale={W}:-2,loop=-1:1,trim=end_frame={n},setpts=N/{FPS}/TB,"
+          f"scale=w='trunc({W}*{k}/2)*2':h=-2:eval=frame[fg];"
+          f"[bg][fg]overlay=x='(W-w)/2{dx}':y='(H-h)/2-60':shortest=1,setsar=1,fps={FPS},format=yuv420p[v]")
     _run(["ffmpeg", "-y", "-v", "error", "-loop", "1", "-t", f"{dur + 0.5}", "-i", str(e["src"]),
           "-filter_complex", fc, "-map", "[v]", "-frames:v", str(n), *ENC, str(out)])
 
@@ -207,6 +214,50 @@ def captions_de_frase(frase: str, ini: float, fin: float, palabras: int = 3) -> 
             for i, t in enumerate(trozos)]
 
 
+def _frases_de_voz(voz: str, texto: str, umbral: float = 0.22) -> list[tuple[float, float]]:
+    """Ubica cada oración del guion dentro del audio usando las pausas (silencedetect)."""
+    r = subprocess.run(["ffmpeg", "-v", "info", "-i", voz, "-af", f"silencedetect=n=-35dB:d={umbral}", "-f", "null", "-"],
+                       capture_output=True, text=True)
+    import re
+    ini = [float(x) for x in re.findall(r"silence_start: ([\d.]+)", r.stderr)]
+    fin = [float(x) for x in re.findall(r"silence_end: ([\d.]+)", r.stderr)]
+    D = _dur(voz)
+    habla, t = [], (fin[0] if ini and ini[0] < 0.05 and fin else 0.0)
+    for a_, b_ in zip(ini, fin):
+        if a_ > t + 0.15:
+            habla.append((t, a_))
+        t = b_
+    if D > t + 0.15:
+        habla.append((t, D))
+    return habla
+
+
+def captions_de_voz(voz: str, texto: str, offset: float = 0.0, palabras: int = 3) -> list[dict]:
+    """Captions de 2-3 palabras sincronizados a la narración: reparte las palabras entre los tramos con voz
+    en proporción a su duración (sin servicios externos)."""
+    habla = _frases_de_voz(voz, texto)
+    w = texto.split()
+    if not habla or not w:
+        return []
+    total = sum(b - a for a, b in habla)
+    trozos = [" ".join(w[i:i + palabras]) for i in range(0, len(w), palabras)]
+    # tiempo "hablado" acumulado -> tiempo real
+    def real(x):
+        acc = 0.0
+        for a, b in habla:
+            if acc + (b - a) >= x:
+                return a + (x - acc)
+            acc += b - a
+        return habla[-1][1]
+    pesos = [len(t) + 2 for t in trozos]
+    P, acc, out = sum(pesos), 0.0, []
+    for t, p in zip(trozos, pesos):
+        x0, x1 = total * acc / P, total * (acc + p) / P
+        acc += p
+        out.append({"t": t, "ini": offset + real(x0), "fin": offset + real(x1) - 0.02, "estilo": "caption"})
+    return out
+
+
 FLECHA = "↓"
 
 
@@ -270,6 +321,13 @@ def armar(tl: dict, base_dir: str | Path = ".") -> Path:
     salida.parent.mkdir(parents=True, exist_ok=True)
     fuente = _fuente()
 
+    if tl.get("voz") and tl.get("ajustar_a_voz", True):
+        objetivo = _dur(R(tl["voz"])) + float(tl.get("voz_en", 0)) + float(tl.get("cola", 0.7))
+        suma = sum(float(e["dur"]) for e in tl["escenas"])
+        f = objetivo / suma
+        tl = dict(tl, escenas=[dict(e, dur=round(float(e["dur"]) * f, 2)) for e in tl["escenas"]])
+        print(f"Escenas ajustadas a la voz: {suma:.1f} s → {objetivo:.1f} s")
+
     with tempfile.TemporaryDirectory() as td:
         tmp = Path(td)
         # 1) escenas de fondo
@@ -316,12 +374,14 @@ def armar(tl: dict, base_dir: str | Path = ".") -> Path:
                 fc.append(f"{ultimo}[p{j}]overlay=x='{xexp}':y={y}:eof_action=pass:"
                           f"enable='between(t,{en:.2f},{en + du:.2f})'[o{j}]")
                 ultimo = f"[o{j}]"
-                if c.get("audio", True) and _tiene_audio(src):
+                if c.get("audio", not tl.get("voz")) and _tiene_audio(src):
                     pres_audio.append((k, en))
                 k += 1
                 dinamico += du * 0.5   # la presentadora cuenta como movimiento (aprox.)
 
         textos = list(tl.get("textos", []))
+        if tl.get("voz") and tl.get("narracion"):
+            textos += captions_de_voz(R(tl["voz"]), tl["narracion"], float(tl.get("voz_en", 0)))
         for f in tl.get("frases", []):
             textos += captions_de_frase(f["t"], f["ini"], f["fin"], f.get("palabras", 3))
         dt = []

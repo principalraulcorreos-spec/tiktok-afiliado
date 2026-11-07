@@ -333,8 +333,7 @@ PLANTILLA_REACCION = (
     "centered, standing in front of a perfectly flat, evenly lit, solid chroma-key green background (pure #00FF00), "
     "no shadows on the background, nothing else in frame. "
     "She reacts as if watching a video playing beside her: {gesto}. Big expressive facial reactions and hand gestures. "
-    "She speaks directly to the camera with natural lip-sync, excited and warm, in natural Mexican Spanish, says exactly: "
-    '"{linea}" She finishes speaking before the 7-second mark. No background music. '
+    "{habla}No background music. "
     "Her hands are empty: she holds nothing. "
     "EXCLUDE: no products, no objects, no props, no phone, no text, no subtitles, no logos, no watermarks, "
     "no green clothing or green accessories, no hair over the edges of the frame."
@@ -348,6 +347,14 @@ GESTOS_REACCION = {
 }
 
 
-def construir_reaccion(linea: str, gesto: str = "sorpresa") -> str:
-    """Prompt para un clip de 8 s de la presentadora con fondo verde (sin producto)."""
-    return PLANTILLA_REACCION.format(persona=PERSONA, gesto=GESTOS_REACCION.get(gesto, gesto), linea=linea)
+HABLA = ("She speaks directly to the camera with natural lip-sync, excited and warm, in natural Mexican Spanish, "
+         'says exactly: "{linea}" She finishes speaking before the 7-second mark. ')
+MUDA = ("She does not speak at all: mouth closed or smiling, only silent facial reactions (gasps silently, smiles, "
+        "nods, raises eyebrows). No voice, no dialogue, only quiet room tone. ")
+
+
+def construir_reaccion(linea: str | None = None, gesto: str = "sorpresa") -> str:
+    """Prompt para un clip de 8 s de la presentadora con fondo verde (sin producto).
+    linea=None → reacción MUDA para el banco reutilizable (la voz la pone el narrador)."""
+    habla = HABLA.format(linea=linea) if linea else MUDA
+    return PLANTILLA_REACCION.format(persona=PERSONA, gesto=GESTOS_REACCION.get(gesto, gesto), habla=habla)

@@ -45,21 +45,21 @@ Salida: ficha de 6 líneas.
 3. Hacer una hoja de contacto del video (`fps=1/2,tile`) para elegir tramos y ver si trae subtítulos quemados (→ `quitar_abajo`).
 4. Si la ficha no trae ningún video, el producto baja de prioridad (la política pide ≥3 s de contenido dinámico real).
 
-## Etapa 3 — Guion (18–24 s)
+## Etapa 3 — Guion (16–22 s)
 Resultado más impactante primero (0–1.5 s) → problema → detalles reales → carrito.
-- 2 clips de presentadora de 8 s (gancho+problema / beneficios+"carrito naranja"), frases ≤17 palabras, solo lo que dice la ficha. Sin "yo lo uso" ni testimonios. Nunca el precio: "está en oferta".
-- Textos: gancho grande (0–1.9 s), captions chicos de 2–3 palabras sincronizados a su voz, CTA "CARRITO NARANJA ↓" al final. Nada más.
-- Tabla de escenas (tramo de video/foto, con duración de 1.0–1.6 s) → `timeline.json`.
-✋ Confirmación 1: guion + tabla de escenas.
+- **Narración** de 40–55 palabras (la voz manda el largo del video): gancho-pregunta + 2–3 beneficios de la ficha + "Están en oferta en el carrito naranja". Sin precio, sin "yo lo uso", sin 100 % ni resultados que no da.
+- Textos en pantalla: solo el gancho grande (0–1.9 s), los captions automáticos de la narración y el CTA "CARRITO NARANJA ↓".
+- Tabla de escenas: tramos de video de 1.0–1.6 s y fotos completas de ≤1.2 s, en el orden del guion → `timeline.json`. Las fotos van completas, nunca recortadas.
+✋ Confirmación 1: narración + tabla de escenas.
 
-## Etapa 4 — Presentadora (20 créditos)
-- `prompts.construir_reaccion(linea, gesto)` (gestos: sorpresa, explica, senala_abajo, duda_a_wow). Flow → **texto a video** (sin Ingredientes ni foto del producto), Veo 3.1 Lite, 9:16, x1.
-- QA: fondo verde parejo, sin objetos ni producto en las manos, cara estable, lip-sync, termina antes de 7 s. Si falla → regenerar máximo 1 vez.
-- Descargar a `<Producto>/presentadora/`. Ir juntando clips buenos en un **banco de reacciones** reutilizable (`Downloads/banco_reacciones/`).
+## Etapa 4 — Voz y presentadora (0–20 créditos)
+1. **Voz:** Google AI Studio → Generate speech, voz `Leda`, prompt = `voz.instruccion_estudio(narracion)` → descargar `voz.wav` (o `python -m afiliado.voz` con GEMINI_API_KEY).
+2. **Presentadora muda** del **banco de reacciones** (`Downloads/banco_reacciones/`): elegir 1–2 clips distintos a los del último video. Si el banco tiene menos de 8 clips, generar más en Flow con `prompts.construir_reaccion(None, gesto)` (texto a video, Veo 3.1 Lite, 9:16, x1, 10 créditos c/u). QA: verde parejo, manos vacías, sin producto, cara estable.
+3. Con narrador, la presentadora va **muda** (solo reacciona). Con el banco lleno, el costo por video es 0 créditos.
 
 ## Etapa 5 — Edición (`afiliado/secuencia.py`)
-- `python -m afiliado.secuencia <Producto>/timeline.json` (o `plan_auto()` y luego ajustar). Hace: escenas 1080x1920 con movimiento (zoom de golpe, Ken Burns, recortes que rebotan), chroma key de la presentadora arriba a la derecha que entra deslizándose, captions con efecto pop, whoosh/pop en cada corte, loudnorm −14 LUFS.
-- Debe imprimir movimiento real ≥50 %. QA en `MODO_REAL_REACCION.md`.
+- `python -m afiliado.secuencia <Producto>/timeline.json` con `"voz"`, `"narracion"` y `"presentadora"`. Ajusta solo las escenas a la duración de la voz, sincroniza los captions con las pausas de la voz, pone a la presentadora arriba a la derecha con chroma key, difumina los subtítulos del vendedor (`franja`), agrega whoosh/pop en los cortes y normaliza a −14 LUFS.
+- Revisar 5 cuadros: fotos completas, sin subtítulos del vendedor, la presentadora no tapa el producto, captions en tiempo, ≥50 % de movimiento real.
 - Copiar FINAL.mp4 + descripcion.txt a `Downloads\<Producto>\` con device_commit_files.
 ✋ Confirmación 2: enviar el video (SendUserFile).
 
@@ -75,6 +75,15 @@ Solo si una herramienta reproduce el producto idéntico. Referencia: `ESTANDAR_P
 6. Esperar comprobaciones en verde.
 ✋ Confirmación 3: tabla (video, descripción, producto + ID, switches). Raúl presiona "Publicar".
 7. Al terminar: `resize_window` preset desktop; anotar en la bitácora de ESTANDAR_PROMPTS.
+
+## Rutina diaria (2 videos/día)
+| Hora | Qué | Quién |
+|---|---|---|
+| 21:00 | Etapas 1–3 de 2 productos (investigación, material, narración y escenas) | Claude → ✋ Raúl aprueba el guion |
+| 22:15 | Etapa 4: voz y reacciones faltantes (los créditos de Flow se recargan ~22:12) | Claude |
+| 22:30 | Etapa 5: edición y QA | Claude → ✋ Raúl revisa el video |
+| 12:30 y 19:00 | Etapa 6: publicar (1 video por horario) | Claude prepara, Raúl da "Publicar" |
+| Domingo | Métricas de la semana (`metrics.py`), ganchos que retienen más, rellenar el banco de reacciones | Claude → ✋ cambios de estrategia |
 
 ## Pendiente
 - Subida del archivo sin intervención: el selector de archivos de Windows no es controlable. Opción en evaluación: almacén de videos en un artifact de Claude y que la página lo inyecte al input de TikTok. Requiere permiso explícito de Raúl.

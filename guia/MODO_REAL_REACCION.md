@@ -22,8 +22,8 @@ Duración de los videos ganadores: 13–28 s, con cortes cada 1–2 s.
 | Tiempo | Fondo (material real) | Presentadora (arriba a la derecha) | Texto |
 |---|---|---|---|
 | 0–1.5 s | Resultado más impactante, con zoom de golpe | Entra deslizándose, sorpresa | Gancho grande |
-| 1.5–8 s | El problema y cómo lo resuelve | Clip 1: gancho + problema | Captions de su frase |
-| 8–15 s | Detalles: material, accesorios, usos (fotos con movimiento entre videos) | Clip 2: beneficios + "carrito naranja" | Captions |
+| 1.5–8 s | El problema y cómo lo resuelve | Reacción muda (asiente, sorpresa) | Captions de la narración |
+| 8–15 s | Detalles: material, accesorios, usos (fotos completas entre videos) | Segunda reacción (cuenta con los dedos) | Captions |
 | Últimos 2 s | Producto completo / variedad | Señala abajo a la izquierda | "CARRITO NARANJA ↓" con flecha que rebota |
 
 El precio nunca se dice ni se muestra.
@@ -34,14 +34,15 @@ El precio nunca se dice ni se muestra.
 - `videos\` — videos de la ficha (la galería de TikTok Shop casi siempre trae 1)
 - `fotos\` — fotos de la galería
 - `recortes\` — producto sin fondo (opcional, `secuencia.recortar_fondo`)
-- `presentadora\` — clips con fondo verde de Flow
+- `voz.wav` — narración de Gemini TTS (AI Studio, voz Leda)
+- `Downloads\banco_reacciones\` — clips MUDOS de la presentadora con fondo verde, reutilizables entre productos
 - `timeline.json` → `FINAL.mp4` + `descripcion.txt`
 
 ## Comandos
 
 ```python
 from afiliado import secuencia, prompts
-prompts.construir_reaccion("¡No, espérate! ...", "sorpresa")      # prompt para Flow (texto a video, 9:16)
+prompts.construir_reaccion(None, "sorpresa")                      # reacción MUDA para el banco (Flow, texto a video, 9:16)
 tl = secuencia.plan_auto("Downloads/Cortinas_Blackout", duracion=20)  # timeline automático (luego se ajusta a mano)
 secuencia.armar(tl, "Downloads/Cortinas_Blackout")
 ```
@@ -49,11 +50,13 @@ o `python -m afiliado.secuencia Downloads/<Producto>/timeline.json`.
 
 ## Parámetros útiles del timeline
 
-- `quitar_abajo: 0.2` en escenas de video: recorta los subtítulos que el vendedor ya trae quemados.
+- `franja: [0.80, 1.0]` en escenas de video: difumina los subtítulos que el vendedor ya trae quemados (no recorta nada).
+- Las fotos se muestran COMPLETAS sobre un fondo desenfocado y oscuro (traen texto en los bordes; recortarlas se ve raro).
+- `voz` + `narracion`: las escenas se ajustan solas a la duración de la voz y los captions se sincronizan con sus pausas.
 - `punch: true`: zoom de golpe (úsalo en el primer tramo y cada ~4 cortes).
 - `presentadora.recorte_y: [0, 0.62]`: usa solo el busto del clip; `ancho: 0.42` del video.
 - `presentadora.similitud`: súbelo (0.18–0.25) si queda borde verde y bájalo si se borra el pelo o la cara.
-- `frases`: la frase exacta que dice la presentadora → captions automáticos de 3 palabras.
+- Con `voz`, la presentadora va muda (`audio: false` por defecto). Sin voz, `frases` → captions de lo que ella dice.
 
 ## QA antes de entregar
 
@@ -68,4 +71,4 @@ o `python -m afiliado.secuencia Downloads/<Producto>/timeline.json`.
 
 | Fecha | Producto | Versión | Resultado | Aprendizaje |
 |---|---|---|---|---|
-| 2026-11-07 | Cortinas Blackout | v1 | Prueba del modo | ver PROTOCOLO |
+| 2026-11-07 | Cortinas Blackout | v1 | Fotos se veían recortadas (zoom dentro de la foto) y los videos perdían los lados | Fotos completas sobre fondo desenfocado; video completo con franja difuminada en vez de recortar |
