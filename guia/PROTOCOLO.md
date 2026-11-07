@@ -61,7 +61,7 @@ La voz que narra es la de la presentadora (lip-sync de Veo). La narración de la
 - Voz de narrador aparte (Gemini TTS en AI Studio): **requiere clave de API con facturación** → no usar sin aprobación de Raúl. Si algún día se activa: `afiliado/voz.py` y presentadora muda (`construir_reaccion(None, gesto)`).
 
 ## Etapa 5 — Edición (`afiliado/secuencia.py`)
-- `python -m afiliado.secuencia <Producto>/timeline.json` con `"presentadora"` (3 clips seguidos con audio) y `"frases"` (captions de lo que dice cada clip). La presentadora habla todo el video arriba a la derecha; pone a la presentadora arriba a la derecha con chroma key, difumina los subtítulos del vendedor (`franja`), agrega whoosh/pop en los cortes y normaliza a −14 LUFS.
+- `python -m afiliado.secuencia <Producto>/timeline.json` (plantilla: `Downloads/Cortinas_Blackout/timeline.json`). En `presentadora.clips` van los 3 clips con `"en": "auto"` (uno tras otro), `dur` = hasta que termina de hablar (ver con `silencedetect`) y `"texto"` = su frase → captions sincronizados con su audio. Las escenas se ajustan solas a lo que dura ella. Además: chroma con el color del fondo detectado (similitud 0.08), franja difuminada sobre los subtítulos del vendedor, whoosh/pop en los cortes y −14 LUFS.
 - Revisar 5 cuadros: fotos completas, sin subtítulos del vendedor, la presentadora no tapa el producto, captions en tiempo, ≥50 % de movimiento real.
 - Copiar FINAL.mp4 + descripcion.txt a `Downloads\<Producto>\` con device_commit_files.
 ✋ Confirmación 2: enviar el video (SendUserFile).
@@ -86,7 +86,7 @@ Solo si una herramienta reproduce el producto idéntico. Referencia: `ESTANDAR_P
 | 22:15 | Etapa 4: 3 clips de la presentadora por video (24 créditos; los créditos de Flow se recargan ~22:12; 2 videos = 48 de 50) | Claude |
 | 22:30 | Etapa 5: edición y QA | Claude → ✋ Raúl revisa el video |
 | 12:30 y 19:00 | Etapa 6: publicar (1 video por horario) | Claude prepara, Raúl da "Publicar" |
-| Domingo | Métricas de la semana (`metrics.py`), ganchos que retienen más, rellenar el banco de reacciones | Claude → ✋ cambios de estrategia |
+| Domingo | Métricas de la semana (`metrics.py`): ganchos que retienen más y formatos que venden | Claude → ✋ cambios de estrategia |
 
 ## Pendiente
 - Subida del archivo sin intervención: el selector de archivos de Windows no es controlable. Opción en evaluación: almacén de videos en un artifact de Claude y que la página lo inyecte al input de TikTok. Requiere permiso explícito de Raúl.
