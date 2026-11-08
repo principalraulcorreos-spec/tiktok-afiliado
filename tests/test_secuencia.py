@@ -66,3 +66,37 @@ def test_qa_detecta_verde_sin_recortar(material, tmp_path):
     _ff("-f", "lavfi", "-i", "color=c=gray:s=1080x1920:r=30:d=3", "-i", material / "presentadora/r1.mp4",
         "-filter_complex", "[1:v]scale=453:-2[p];[0:v][p]overlay=591:200:shortest=1", "-an", out)
     assert qa.medir(out)["verde_residual_pct"] > 20
+
+
+def _salto_max_borde(video: Path) -> float:
+    """Mayor salto de luminancia entre filas consecutivas alrededor del borde inferior del busto (y≈600–780)."""
+    raw = subprocess.run(["ffmpeg", "-v", "error", "-ss", "3", "-i", str(video), "-frames:v", "1",
+                          "-vf", "crop=150:180:750:600,format=gray", "-f", "rawvideo", "-"],
+                         capture_output=True, check=True).stdout
+    filas = [sum(raw[r * 150:(r + 1) * 150]) / 150 for r in range(180)]
+    return max(abs(filas[i + 1] - filas[i]) for i in range(179))
+
+
+@pytest.fixture(scope="module")
+def material_liso(tmp_path_factory, material) -> Path:
+    """Fondo negro liso y sin fotos, para aislar el borde inferior del busto."""
+    d = tmp_path_factory.mktemp("liso")
+    for sub in ("videos", "presentadora"):
+        (d / sub).mkdir()
+    _ff("-f", "lavfi", "-i", "color=c=black:s=576x1024:r=30:d=8", d / "videos/v1.mp4")
+    (d / "presentadora/r1.mp4").write_bytes((material / "presentadora/r1.mp4").read_bytes())
+    return d
+
+
+@pytest.mark.parametrize("fade,maximo", [(0.12, 30), (0, None)])
+def test_busto_se_desvanece_abajo(material_liso, fade, maximo):
+    """Con `desvanecer` el busto no termina en un corte recto; con 0 se conserva el corte (control)."""
+    material = material_liso
+    tl = secuencia.plan_auto(material, duracion=6)
+    tl["presentadora"] = {"desvanecer": fade,
+                          "clips": [{"src": "presentadora/r1.mp4", "dur": 5.0, "en": "auto", "texto": "mira"}]}
+    salto = _salto_max_borde(secuencia.armar(tl, material))
+    if maximo is None:
+        assert salto > 60      # corte recto: el control negativo sí debe verse
+    else:
+        assert salto < maximo

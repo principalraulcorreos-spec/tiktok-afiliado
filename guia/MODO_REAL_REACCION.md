@@ -57,6 +57,7 @@ o `python -m afiliado.secuencia Downloads/<Producto>/timeline.json`.
 - `voz` + `narracion`: las escenas se ajustan solas a la duración de la voz y los captions se sincronizan con sus pausas.
 - `punch: true`: zoom de golpe (úsalo en el primer tramo y cada ~4 cortes).
 - `presentadora.recorte_y: [0, 0.62]`: usa solo el busto del clip; `ancho: 0.42` del video.
+- `presentadora.desvanecer` (0.12 por defecto): el 12 % inferior del busto se desvanece para que no se vea el corte recto del recorte. `0` = corte recto como antes.
 - `presentadora.similitud` (0.08 por defecto): el color del verde se detecta solo (Veo da ~#3F9D3E, no #00FF00). Con 0.13 o más la blusa blanca y la cara se vuelven transparentes; súbelo poco a poco solo si queda borde verde.
 - Con `voz`, la presentadora va muda (`audio: false` por defecto). Sin voz, `frases` → captions de lo que ella dice.
 

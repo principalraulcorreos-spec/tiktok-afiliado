@@ -19,6 +19,7 @@ timeline.json (rutas relativas a la carpeta del timeline):
     "ancho": 0.42,                               # fracción del ancho del video
     "verde": "0x00FF00", "similitud": 0.16, "suavizado": 0.08,
     "recorte_y": [0.0, 0.62],                    # parte del clip que se usa (0=arriba, 1=abajo): busto
+    "desvanecer": 0.12,                          # fracción inferior del busto que se desvanece (0 = corte recto)
     "clips": [{"src": "presentadora/r1.mp4", "ini": 0.0, "dur": 3.0, "en": 0.0, "audio": true}]
   },
   "voz": "voz.wav",                              # narración (Gemini TTS de AI Studio). Con voz, la presentadora va muda
@@ -320,6 +321,20 @@ def color_fondo(src: str, t: float = 1.0) -> str:
     return "0x%02X%02X%02X" % tuple(rgb)
 
 
+def _desvanecer(entrada: str, salida: str, frac: float, n: int) -> list[str]:
+    """Desvanece la parte inferior del busto (alfa 1 → 0 en la fracción `frac` de abajo) para que no se vea
+    el corte recto del recorte. La rampa se calcula UNA vez (1 cuadro en bucle) y se multiplica con el alfa,
+    así casi no suma tiempo de render. Con frac <= 0 solo pasa la entrada."""
+    if frac <= 0:
+        return [f"{entrada}null{salida}"]
+    return [f"color=c=black:s=8x512:r={FPS}:d=1,format=gray,geq=lum='255*clip((H-1-Y)/(H*{frac:.4f})\\,0\\,1)',"
+            f"trim=end_frame=1,loop=-1:1:0,setpts=N/{FPS}/TB[gr{n}]",
+            f"{entrada}split[pc{n}][pa{n}]", f"[pa{n}]alphaextract[al{n}]",
+            f"[gr{n}][al{n}]scale2ref=w=iw:h=ih[gs{n}][ar{n}]",
+            f"[ar{n}][gs{n}]blend=all_mode=multiply:shortest=1[am{n}]",
+            f"[pc{n}][am{n}]alphamerge{salida}"]
+
+
 def _pos(pos: str, pw: int, ph: int) -> tuple[str, str]:
     m = 36
     if pos == "arriba_izquierda":
@@ -394,6 +409,7 @@ def armar(tl: dict, base_dir: str | Path = ".") -> Path:
             pw = int(W * float(pres.get("ancho", 0.42)))
             y0, y1 = pres.get("recorte_y", [0.0, 0.62])
             sim, suav = pres.get("similitud", 0.08), pres.get("suavizado", 0.03)
+            fade = float(pres.get("desvanecer", 0.12))   # fracción inferior del busto que se desvanece (0 = corte recto)
             for j, c in enumerate(pres["clips"]):
                 src = R(c["src"])
                 verde = pres.get("verde") or color_fondo(src)
@@ -406,7 +422,9 @@ def armar(tl: dict, base_dir: str | Path = ".") -> Path:
                 lado = "-" if pres.get("pos") == "arriba_izquierda" else "+"
                 xexp = f"{x}{lado}if(lt(t-{en:.2f}\\,0.22)\\,(1-(t-{en:.2f})/0.22)*{pw}\\,0)"
                 fc.append(f"[{k}:v]crop=iw:ih*{y1 - y0}:0:ih*{y0},chromakey={verde}:{sim}:{suav},despill=green,"
-                          f"scale={pw}:-2,fps={FPS},setpts=PTS-STARTPTS+{en:.3f}/TB[p{j}]")
+                          f"scale={pw}:-2,fps={FPS}[ps{j}]")
+                fc += _desvanecer(f"[ps{j}]", f"[pf{j}]", fade, j)
+                fc.append(f"[pf{j}]setpts=PTS-STARTPTS+{en:.3f}/TB[p{j}]")
                 fc.append(f"{ultimo}[p{j}]overlay=x='{xexp}':y={y}:eof_action=pass:"
                           f"enable='between(t,{en:.2f},{en + du:.2f})'[o{j}]")
                 ultimo = f"[o{j}]"

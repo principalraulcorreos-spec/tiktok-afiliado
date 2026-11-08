@@ -26,6 +26,7 @@ Registro histórico de auditorías, experimentos y mejoras. La tarea programada 
 ## Historial
 | Fecha | Tipo | Qué | Antes | Después | Evidencia | Estado |
 |---|---|---|---|---|---|---|
+| 2026-11-08 | Mejora | Desvanecido inferior del busto de la presentadora (`presentadora.desvanecer`, 0.12 por defecto; 0 = corte recto). Rampa calculada 1 vez y multiplicada con el alfa | Corte recto: salto de luminancia de 203 (fondo liso) / 119 (fondo con movimiento) en una sola fila | Salto de 6 / 4; transición repartida en ~40 filas. QA de 7 métricas idéntico (verde 0.01–0.02 %, LUFS −14.8, TP −1.7). Render 11.27 → 10.93 s (3 corridas c/u, ruido) | 2 pruebas nuevas (`test_busto_se_desvanece_abajo` + control negativo), 6/6 en 31 s; pyflakes 0. Primer intento con `geq` por cuadro: +2.5 s de render (+23 %) → descartado | ✅ en main y `estable` |
 | 2026-11-07 | Mejora | Fotos en la zona libre (debajo de la presentadora) | 13.2 % del área de cada foto quedaba bajo la presentadora (tapaba textos como "CORTINAS SUPER OPACAS") | 0 % (foto de 1000 px desde y=700; la presentadora termina en y≈699) | hoja `qa_hoja.jpg` v3; QA igual (7/7 ✅) | ✅ en main |
 | 2026-11-07 | Calidad | Pruebas automáticas (`tests/test_secuencia.py`), incluido un control negativo de chroma | 0 pruebas | 4 pruebas, 17 s | `pytest -q` | ✅ |
 | 2026-11-07 | Calidad | QA objetivo (`afiliado/qa.py`, `python -m afiliado qa/video`) | revisión solo a ojo | 7 métricas con umbral + hoja de contacto + histórico CSV | `metricas_videos.csv` | ✅ |
@@ -48,20 +49,29 @@ Registro histórico de auditorías, experimentos y mejoras. La tarea programada 
 4. El TTS de AI Studio pide facturación → la voz depende de Veo (lip-sync). Si se aprueba un TTS de pago, la presentadora muda + banco de reacciones bajaría el costo a ~0 créditos/video.
 5. Scripts de un solo uso del modo anterior (`scripts/editar_*.py`, `variantes_*.py`): no se borran (son historial); candidatos a moverse a `scripts/legacy/`.
 6. `loudnorm` en una pasada da −16.4 LUFS cuando casi no hay audio (modo sin presentadora). Solo afecta al formato sin voz.
-7. El busto de la presentadora termina con un corte recto abajo (se nota en fondos claros).
+7. ~~El busto de la presentadora termina con un corte recto abajo~~ → resuelto 2026-11-08 (`desvanecer`).
 
 ## Backlog priorizado
 | # | Oportunidad | Hipótesis | Métrica | Necesita |
 |---|---|---|---|---|
-| P1 | Desvanecido inferior del busto (corte suave) | Se ve más natural sin afectar el QA | QA 7/7 + revisión de la hoja | nada |
-| P2 | `loudnorm` en 2 pasadas | LUFS dentro de ±0.5 en todos los formatos | LUFS del QA | nada |
-| P3 | Selección automática de fotos sin texto en la esquina superior derecha | Menos fotos inútiles | % de fotos aprovechadas | nada |
-| P4 | Tiempo de render: preset `veryfast` en las escenas intermedias, `medium` solo en la final | −30 % de tiempo sin perder calidad | segundos de render; tamaño/calidad iguales | nada |
+| P1 | `loudnorm` en 2 pasadas | LUFS dentro de ±0.5 en todos los formatos | LUFS del QA | nada |
+| P2 | Selección automática de fotos sin texto en la esquina superior derecha | Menos fotos inútiles | % de fotos aprovechadas | nada |
+| P3 | Tiempo de render: preset `veryfast` en las escenas intermedias, `medium` solo en la final | −30 % de tiempo sin perder calidad | segundos de render; tamaño/calidad iguales | nada |
 | X1 | Presentadora arriba a la derecha vs abajo al centro (estilo @lojavibebr) | Abajo retiene más | % vista completa, tiempo medio | datos de TikTok Studio, ≥3 videos por variante, OK de Raúl |
 | X2 | Gancho de texto grande vs sin texto | Con texto retiene más en los primeros 2 s | retención a 2 s | ídem |
 | X3 | ~15 s vs ~21 s | Más corto = más vistas completas, mismas ventas | % vista completa, CTR del producto | ídem |
 | X4 | Horario 12:30 vs 19:00 | 19:00 vende más | ventas por 1,000 vistas | ídem |
 
 ## Pendientes que requieren a Raúl
+- Revisar en el próximo video real que el desvanecido del busto se vea natural (si no gusta: `"desvanecer": 0` en el timeline).
 - Iniciar sesión en TikTok (Studio y Centro de afiliados) en el navegador integrado de la PC servidor, para medir vistas, retención y ventas.
 - Aprobar el primer experimento de contenido (X1) cuando haya ≥6 videos publicados del modo nuevo.
+
+## Rendimiento (revisión 2026-11-08)
+- `guia/metricas_rendimiento.csv`: no existe. Sin datos de vistas, retención ni ventas → ningún experimento de contenido (X1–X4) se puede evaluar. Falta: sesión de TikTok Studio y Centro de afiliados en la PC servidor, o subir el CSV al repo, y ≥3 videos por variante.
+- `guia/metricas_videos.csv`: 2 filas (Cortinas Blackout v2 y v3, 7/7 ✅); sin videos nuevos desde el 7-nov.
+
+## Resumen semanal (semana al 2026-11-08)
+- Mejoras en main: fotos en zona libre, QA objetivo (7 métricas), pruebas automáticas (4 → 6), limpieza pyflakes (6 → 0), chroma con color detectado, desvanecido del busto.
+- Estabilidad: 6/6 pruebas, 0 avisos, `estable` = main.
+- Rendimiento: sin datos (bloqueante principal). Videos REAL+REACCIÓN producidos: 1 (Cortinas Blackout).
