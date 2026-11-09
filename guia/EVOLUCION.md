@@ -57,7 +57,7 @@ Registro histórico de auditorías, experimentos y mejoras. La tarea programada 
 |---|---|---|---|---|
 | P1 | Selección automática de fotos sin texto en la esquina superior derecha | Menos fotos inútiles | % de fotos aprovechadas | nada |
 | P2 | Tiempo de render: preset `veryfast` en las escenas intermedias, `medium` solo en la final | −30 % de tiempo sin perder calidad | segundos de render; tamaño/calidad iguales | nada |
-| P3 | `python -m afiliado qa` con una ruta que no existe truena con `ValueError: could not convert string to float` | Mensaje claro "no existe el video" | prueba que lo cubra | nada |
+| P3 | `python -m afiliado qa`: (a) con una ruta que no existe truena con `ValueError: could not convert string to float`; (b) registra SIEMPRE en `metricas_videos.csv` (`--registro` tiene valor por defecto), así que las pruebas con material sintético ensucian el histórico | Mensaje claro y registro solo si se pide | pruebas que lo cubran | nada |
 | P4 | Aplicar la misma normalización de 2 pasadas en `editor.py` y `rapido.py` (modo anterior; hoy siguen en 1 pasada) | LUFS ±0.5 también ahí | LUFS del QA | nada (baja prioridad: no es el formato principal) |
 | X1 | Presentadora arriba a la derecha vs abajo al centro (estilo @lojavibebr) | Abajo retiene más | % vista completa, tiempo medio | datos de TikTok Studio, ≥3 videos por variante, OK de Raúl |
 | X2 | Gancho de texto grande vs sin texto | Con texto retiene más en los primeros 2 s | retención a 2 s | ídem |
