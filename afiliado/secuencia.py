@@ -44,6 +44,7 @@ from __future__ import annotations
 import json
 import math
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -73,6 +74,66 @@ def _tiene_audio(p) -> bool:
     r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a", "-show_entries", "stream=index",
                         "-of", "csv=p=0", str(p)], capture_output=True, text=True)
     return bool(r.stdout.strip())
+
+
+def _medir_lufs(wav: str | Path, cadenas: list[str]) -> list[float] | None:
+    """Sonoridad integrada (LUFS, ebur128 = la misma medida del QA) de `wav` pasado por cada una de `cadenas`,
+    en UNA sola llamada a ffmpeg (asplit). None si falla o si es silencio total."""
+    n = len(cadenas)
+    ramas = [f"[0:a]asplit={n}" + "".join(f"[r{k}]" for k in range(n))] if n > 1 else []
+    ramas += [f"[{'r%d' % k if n > 1 else '0:a'}]{c},ebur128=framelog=quiet[m{k}]" for k, c in enumerate(cadenas)]
+    salidas = [x for k in range(n) for x in ("-map", f"[m{k}]", "-f", "null", "-")]
+    r = subprocess.run(["ffmpeg", "-hide_banner", "-nostats", "-v", "info", "-i", str(wav),
+                        "-filter_complex", ";".join(ramas), *salidas], capture_output=True, text=True)
+    res = re.findall(r"Parsed_ebur128_(\d+) @[^\]]*\] Summary:\s*\n(?:.*\n)*?\s*I:\s+(-?[\d.]+) LUFS", r.stderr)
+    if r.returncode != 0 or len(res) != n:
+        return None
+    i = [float(v) for _, v in sorted(res, key=lambda x: int(x[0]))]   # ffmpeg imprime los resúmenes al revés
+    return i if min(i) > -70 else None
+
+
+def _render_mezcla(entradas: list[str], mezcla: list[str], etiqueta: str, wav: Path) -> float | None:
+    """Renderiza la mezcla de audio `etiqueta` a `wav` (solo audio, sin demuxar el video) y de paso mide su
+    sonoridad original con ebur128 (pasada 1, sin costo extra). Devuelve los LUFS o None."""
+    solo_audio = [x for a in entradas for x in (("-vn", a) if a == "-i" else (a,))]
+    r = subprocess.run(["ffmpeg", "-y", "-hide_banner", "-nostats", "-v", "info", *solo_audio, "-filter_complex",
+                        ";".join([*mezcla, f"{etiqueta}ebur128=framelog=quiet[wavm]"]), "-map", "[wavm]",
+                        "-c:a", "pcm_f32le", str(wav)], capture_output=True, text=True)
+    if r.returncode != 0:
+        raise RuntimeError("ffmpeg falló al mezclar el audio:\n" + r.stderr[-2500:])
+    i = re.findall(r"I:\s+(-?[\d.]+) LUFS", r.stderr)
+    return float(i[-1]) if i and float(i[-1]) > -70 else None
+
+
+def _loudnorm_2p(wav: str | Path, objetivo: float = -14.0, tp: float = -1.5, i0: float | None = None) -> str:
+    """Normalización en 2 pasadas sobre la mezcla ya renderizada `wav`: devuelve ganancia fija + limitador.
+    En 1 pasada (loudnorm dinámico) los videos con mucho silencio y efectos quedaban en −16.6 LUFS: los efectos
+    son casi puro pico y el modo lineal de loudnorm no sube la ganancia si un pico rebasa el true peak.
+    Pasada 1: sonoridad original (`i0`, o se mide). Pasada 2: prueba 3 ganancias con el limitador a la vez
+    (el limitador se come parte de la ganancia) e interpola la que da el objetivo. Si falla, regresa el loudnorm de antes."""
+    base = f"loudnorm=I={objetivo}:TP={tp}"
+    lim = 10 ** ((tp - 0.5) / 20)              # 0.5 dB de margen: alimiter mide pico de muestra, no true peak
+
+    def cadena(g):
+        return f"volume={g:.2f}dB,alimiter=limit={lim:.4f}:attack=2:release=50:level=0,aresample=44100"
+    if i0 is None:
+        m = _medir_lufs(wav, ["anull"])
+        if m is None:
+            return base
+        i0 = m[0]
+    gs = [objetivo - i0 + extra for extra in (0, 3, 6)]
+    ii = _medir_lufs(wav, [cadena(g) for g in gs])
+    if ii is None:
+        return base
+    g = gs[-1]                                 # si ni con +6 dB llega, se queda con la más alta
+    for (ga, ia), (gb, ib) in zip(zip(gs, ii), zip(gs[1:], ii[1:])):
+        if ia >= objetivo:
+            g = ga
+            break
+        if ia < objetivo <= ib:
+            g = ga + (gb - ga) * (objetivo - ia) / (ib - ia)
+            break
+    return cadena(g)
 
 
 def _esc(p) -> str:
@@ -504,7 +565,12 @@ def armar(tl: dict, base_dir: str | Path = ".") -> Path:
         entradas += ["-f", "lavfi", "-t", f"{D:.3f}", "-i", "anullsrc=r=44100:cl=stereo"]
         a_idx.append(f"[{k}:a]")
         mezcla.append("".join(a_idx) + f"amix=inputs={len(a_idx)}:duration=longest:normalize=0,"
-                      f"atrim=0:{D:.3f},loudnorm=I=-14:TP=-1.5[aout]")
+                      f"atrim=0:{D:.3f}[mix]")
+        # la mezcla se renderiza una vez (solo audio) → se mide → el render final solo le aplica la ganancia
+        wav = tmp / "mezcla.wav"
+        i0 = _render_mezcla(entradas, mezcla, "[mix]", wav)
+        entradas += ["-i", str(wav)]
+        mezcla = [f"[{k + 1}:a]{_loudnorm_2p(wav, i0=i0) if i0 is not None else 'loudnorm=I=-14:TP=-1.5'}[aout]"]
 
         _run(["ffmpeg", "-y", "-v", "error", *entradas, "-filter_complex", ";".join(fc + mezcla),
               "-map", "[vout]", "-map", "[aout]", "-t", f"{D:.3f}", "-c:v", "libx264", "-preset", "medium",

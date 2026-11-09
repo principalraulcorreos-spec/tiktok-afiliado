@@ -1,3 +1,8 @@
 fecha,producto,version,video,duracion_s,lufs,true_peak_db,cortes_por_s,congelado_pct,negro_s,verde_residual_pct,mb,aprobado
 2026-11-07,Cortinas_Blackout,v2 (antes: foto bajo la presentadora),FINAL_v2_antes.mp4,20.83,-14.0,-1.4,0.96,0.0,0,0.0,10.69,True
 2026-11-07,Cortinas_Blackout,v3 (fotos en zona libre),FINAL.mp4,20.83,-14.0,-1.4,0.96,0.0,0,0.0,10.78,True
+2026-11-09,mat,,out_presentadora.mp4,5.47,-14.0,-1.6,0.37,0.0,0,0.0,3.33,False
+2026-11-09,mat,,out_sin_voz.mp4,13.9,-14.0,-1.9,0.22,0.0,0,0.0,3.81,False
+2026-11-09,mat,,out_presentadora.mp4,5.47,-14.0,-1.6,0.37,0.0,0,0.0,3.33,False
+2026-11-09,mat,,out_sin_voz.mp4,13.9,-14.0,-1.8,0.22,0.0,0,0.0,3.81,False
+2026-11-09,mat,,out_voz_baja.mp4,14.47,-14.1,-1.6,0.21,0.0,0,0.0,4.2,False

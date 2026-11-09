@@ -100,3 +100,19 @@ def test_busto_se_desvanece_abajo(material_liso, fade, maximo):
         assert salto > 60      # corte recto: el control negativo sí debe verse
     else:
         assert salto < maximo
+
+
+def test_loudnorm_2_pasadas_sin_voz(material, tmp_path):
+    """Sin voz (solo efectos y mucho silencio) el loudnorm de 1 pasada quedaba en −16.6 LUFS; debe quedar en −14 ±0.5
+    sin pasar el true peak del QA."""
+    tl = secuencia.plan_auto(material, duracion=8)
+    tl["salida"] = str(tmp_path / "sin_voz.mp4")
+    m = qa.medir(secuencia.armar(tl, material))
+    assert -14.5 <= m["lufs"] <= -13.5
+    assert m["true_peak_db"] <= -1.0
+
+
+def test_loudnorm_2p_silencio_regresa_1_pasada(tmp_path):
+    wav = tmp_path / "silencio.wav"
+    _ff("-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo", "-t", "2", wav)
+    assert secuencia._loudnorm_2p(wav).startswith("loudnorm=")

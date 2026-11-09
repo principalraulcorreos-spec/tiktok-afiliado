@@ -26,6 +26,7 @@ Registro histórico de auditorías, experimentos y mejoras. La tarea programada 
 ## Historial
 | Fecha | Tipo | Qué | Antes | Después | Evidencia | Estado |
 |---|---|---|---|---|---|---|
+| 2026-11-09 | Mejora | Normalización de audio en 2 pasadas (`secuencia._loudnorm_2p`): la mezcla se renderiza 1 vez a WAV midiendo su sonoridad (pasada 1); la pasada 2 prueba 3 ganancias con limitador de picos en una sola llamada e interpola la que da −14 LUFS. Si la medición falla, vuelve al `loudnorm` de 1 pasada | LUFS: −14.8 (presentadora) / −16.5 (sin voz, solo efectos) / −16.6 (voz baja); QA de LUFS ⚠️ en 2 de 3 casos | −14.0 / −14.0 / −14.0 (error máx. 2.6 → 0.1 LU); QA de LUFS ✅ en los 3. True peak −1.6 / −1.9 / −1.6 (umbral −1.0). Duración, cortes/s, congelado, negro y verde idénticos. Render prom. 3 corridas: 12.78→12.57 s, 18.04→18.46 s, 18.59→18.71 s (dentro del ruido: 1 s de variación entre corridas del original) | 2 pruebas nuevas (`test_loudnorm_2_pasadas_sin_voz`, falla con el código anterior: −15.8; y silencio → 1 pasada); 8/8 en 53 s; pyflakes 0. Intentos descartados: `loudnorm` lineal (−15.3, lo frena el true peak de los efectos) y 3–4 re-mediciones en serie (+1.5 s de render) | ✅ en main y `estable` |
 | 2026-11-08 | Mejora | Desvanecido inferior del busto de la presentadora (`presentadora.desvanecer`, 0.12 por defecto; 0 = corte recto). Rampa calculada 1 vez y multiplicada con el alfa | Corte recto: salto de luminancia de 203 (fondo liso) / 119 (fondo con movimiento) en una sola fila | Salto de 6 / 4; transición repartida en ~40 filas. QA de 7 métricas idéntico (verde 0.01–0.02 %, LUFS −14.8, TP −1.7). Render 11.27 → 10.93 s (3 corridas c/u, ruido) | 2 pruebas nuevas (`test_busto_se_desvanece_abajo` + control negativo), 6/6 en 31 s; pyflakes 0. Primer intento con `geq` por cuadro: +2.5 s de render (+23 %) → descartado | ✅ en main y `estable` |
 | 2026-11-07 | Mejora | Fotos en la zona libre (debajo de la presentadora) | 13.2 % del área de cada foto quedaba bajo la presentadora (tapaba textos como "CORTINAS SUPER OPACAS") | 0 % (foto de 1000 px desde y=700; la presentadora termina en y≈699) | hoja `qa_hoja.jpg` v3; QA igual (7/7 ✅) | ✅ en main |
 | 2026-11-07 | Calidad | Pruebas automáticas (`tests/test_secuencia.py`), incluido un control negativo de chroma | 0 pruebas | 4 pruebas, 17 s | `pytest -q` | ✅ |
@@ -48,24 +49,30 @@ Registro histórico de auditorías, experimentos y mejoras. La tarea programada 
 3. La ficha de TikTok Shop pide captcha ("Security Check") y no se puede resolver solo.
 4. El TTS de AI Studio pide facturación → la voz depende de Veo (lip-sync). Si se aprueba un TTS de pago, la presentadora muda + banco de reacciones bajaría el costo a ~0 créditos/video.
 5. Scripts de un solo uso del modo anterior (`scripts/editar_*.py`, `variantes_*.py`): no se borran (son historial); candidatos a moverse a `scripts/legacy/`.
-6. `loudnorm` en una pasada da −16.4 LUFS cuando casi no hay audio (modo sin presentadora). Solo afecta al formato sin voz.
+6. ~~`loudnorm` en una pasada da −16.4 LUFS cuando casi no hay audio~~ → resuelto 2026-11-09 (2 pasadas, −14.0 en todos los formatos).
 7. ~~El busto de la presentadora termina con un corte recto abajo~~ → resuelto 2026-11-08 (`desvanecer`).
 
 ## Backlog priorizado
 | # | Oportunidad | Hipótesis | Métrica | Necesita |
 |---|---|---|---|---|
-| P1 | `loudnorm` en 2 pasadas | LUFS dentro de ±0.5 en todos los formatos | LUFS del QA | nada |
-| P2 | Selección automática de fotos sin texto en la esquina superior derecha | Menos fotos inútiles | % de fotos aprovechadas | nada |
-| P3 | Tiempo de render: preset `veryfast` en las escenas intermedias, `medium` solo en la final | −30 % de tiempo sin perder calidad | segundos de render; tamaño/calidad iguales | nada |
+| P1 | Selección automática de fotos sin texto en la esquina superior derecha | Menos fotos inútiles | % de fotos aprovechadas | nada |
+| P2 | Tiempo de render: preset `veryfast` en las escenas intermedias, `medium` solo en la final | −30 % de tiempo sin perder calidad | segundos de render; tamaño/calidad iguales | nada |
+| P3 | `python -m afiliado qa` con una ruta que no existe truena con `ValueError: could not convert string to float` | Mensaje claro "no existe el video" | prueba que lo cubra | nada |
+| P4 | Aplicar la misma normalización de 2 pasadas en `editor.py` y `rapido.py` (modo anterior; hoy siguen en 1 pasada) | LUFS ±0.5 también ahí | LUFS del QA | nada (baja prioridad: no es el formato principal) |
 | X1 | Presentadora arriba a la derecha vs abajo al centro (estilo @lojavibebr) | Abajo retiene más | % vista completa, tiempo medio | datos de TikTok Studio, ≥3 videos por variante, OK de Raúl |
 | X2 | Gancho de texto grande vs sin texto | Con texto retiene más en los primeros 2 s | retención a 2 s | ídem |
 | X3 | ~15 s vs ~21 s | Más corto = más vistas completas, mismas ventas | % vista completa, CTR del producto | ídem |
 | X4 | Horario 12:30 vs 19:00 | 19:00 vende más | ventas por 1,000 vistas | ídem |
 
 ## Pendientes que requieren a Raúl
+- En el próximo video real, confirmar que el audio no suena "apretado" (el QA debe dar −14 LUFS; si la voz se oye comprimida, avisar).
 - Revisar en el próximo video real que el desvanecido del busto se vea natural (si no gusta: `"desvanecer": 0` en el timeline).
 - Iniciar sesión en TikTok (Studio y Centro de afiliados) en el navegador integrado de la PC servidor, para medir vistas, retención y ventas.
 - Aprobar el primer experimento de contenido (X1) cuando haya ≥6 videos publicados del modo nuevo.
+
+## Rendimiento (revisión 2026-11-09)
+- `guia/metricas_rendimiento.csv`: sigue sin existir → sin datos. Ningún experimento X1–X4 evaluable. Falta lo mismo: sesión de TikTok Studio y Centro de afiliados en la PC servidor (o subir el CSV) y ≥3 videos por variante.
+- `guia/metricas_videos.csv`: 2 filas (Cortinas Blackout v2 y v3); sin videos nuevos desde el 7-nov.
 
 ## Rendimiento (revisión 2026-11-08)
 - `guia/metricas_rendimiento.csv`: no existe. Sin datos de vistas, retención ni ventas → ningún experimento de contenido (X1–X4) se puede evaluar. Falta: sesión de TikTok Studio y Centro de afiliados en la PC servidor, o subir el CSV al repo, y ≥3 videos por variante.
