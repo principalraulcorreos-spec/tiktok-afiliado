@@ -37,8 +37,14 @@ def _ff(args: list[str]) -> str:
 
 def medir(video: str | Path) -> dict:
     v = str(video)
-    dur = float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", v],
-                               capture_output=True, text=True).stdout.strip())
+    if not Path(v).is_file():
+        raise FileNotFoundError(f"No existe el video: {v}")
+    sal = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", v],
+                         capture_output=True, text=True).stdout.strip()
+    try:
+        dur = float(sal)
+    except ValueError:
+        raise ValueError(f"No se pudo leer la duración de {v} (¿archivo dañado o no es video?)") from None
     m = {"video": Path(v).name, "duracion_s": round(dur, 2)}
 
     e = _ff(["-i", v, "-af", "ebur128=peak=true", "-f", "null", "-"])

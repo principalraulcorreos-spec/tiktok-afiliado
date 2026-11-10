@@ -116,3 +116,23 @@ def test_loudnorm_2p_silencio_regresa_1_pasada(tmp_path):
     wav = tmp_path / "silencio.wav"
     _ff("-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo", "-t", "2", wav)
     assert secuencia._loudnorm_2p(wav).startswith("loudnorm=")
+
+
+def test_qa_cli_ruta_inexistente_da_mensaje_claro(tmp_path):
+    from afiliado.__main__ import main
+    with pytest.raises(SystemExit) as e:
+        main(["qa", str(tmp_path / "no_existe.mp4")])
+    assert "No existe el video" in str(e.value.code)
+
+
+def test_qa_cli_registra_solo_si_se_pide(tmp_path, monkeypatch):
+    from afiliado.__main__ import main
+    monkeypatch.chdir(tmp_path)        # un registro por defecto (guia/metricas_videos.csv) caería aquí
+    out = tmp_path / "v.mp4"
+    _ff("-f", "lavfi", "-i", "testsrc2=s=360x640:r=30:d=2", "-f", "lavfi", "-i", "sine=f=440:d=2",
+        "-c:v", "libx264", "-preset", "ultrafast", "-shortest", out)
+    csv_ = tmp_path / "hist.csv"
+    main(["qa", str(out)])
+    assert not list(tmp_path.rglob("*.csv"))       # sin --registro no se escribe ningún histórico
+    main(["qa", str(out), "--registro", str(csv_)])
+    assert len(csv_.read_text(encoding="utf-8").strip().splitlines()) == 2   # encabezado + 1 fila

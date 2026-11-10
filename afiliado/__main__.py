@@ -122,7 +122,8 @@ def main(argv=None):
     a.add_argument("timeline")
     a = sub.add_parser("qa", help="QA objetivo de un video (duración, LUFS, cortes, congelado, verde residual)")
     a.add_argument("video")
-    a.add_argument("--registro", default="guia/metricas_videos.csv")
+    a.add_argument("--registro", metavar="CSV",
+                   help="agrega la fila al histórico (p. ej. guia/metricas_videos.csv); sin esto no registra nada")
 
     args = ap.parse_args(argv)
     if args.cmd in ("video", "qa"):           # no necesitan la base de datos
@@ -134,8 +135,12 @@ def main(argv=None):
             qa.hoja(out, out.parent / "qa_hoja.jpg")
         else:
             out = Path(args.video)
-            m = qa.medir(out)
-            qa.registrar(m, args.registro, out.parent.name)
+            try:
+                m = qa.medir(out)
+            except (FileNotFoundError, ValueError) as e:
+                raise SystemExit(f"QA: {e}")
+            if args.registro:
+                qa.registrar(m, args.registro, out.parent.name)
         (out.parent / "qa.json").write_text(json.dumps(m, ensure_ascii=False, indent=1), encoding="utf-8")
         print(json.dumps(m["evaluacion"], ensure_ascii=False), "→", "APROBADO" if m["aprobado"] else "REVISAR")
         return
