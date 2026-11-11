@@ -136,3 +136,17 @@ def test_qa_cli_registra_solo_si_se_pide(tmp_path, monkeypatch):
     assert not list(tmp_path.rglob("*.csv"))       # sin --registro no se escribe ningún histórico
     main(["qa", str(out), "--registro", str(csv_)])
     assert len(csv_.read_text(encoding="utf-8").strip().splitlines()) == 2   # encabezado + 1 fila
+
+
+def test_chroma_se_aplica_ya_escalado(material, tmp_path, monkeypatch):
+    """Rendimiento (2026-11-11): la presentadora se escala ANTES de chromakey/despill (2.5× menos píxeles)."""
+    cmds = []
+    orig = secuencia._run
+    monkeypatch.setattr(secuencia, "_run", lambda c: (cmds.append(c), orig(c))[1])
+    tl = secuencia.plan_auto(material, duracion=4)
+    tl["salida"] = str(tmp_path / "e.mp4")
+    tl["presentadora"] = {"clips": [{"src": "presentadora/r1.mp4", "dur": 3.0, "en": "auto"}]}
+    m = qa.medir(secuencia.armar(tl, material))
+    fc = next(c[c.index("-filter_complex") + 1] for c in cmds if "medium" in c)
+    assert fc.index("scale=453:-2") < fc.index("chromakey=")
+    assert m["verde_residual_pct"] < 0.5
