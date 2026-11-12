@@ -150,3 +150,30 @@ def test_chroma_se_aplica_ya_escalado(material, tmp_path, monkeypatch):
     fc = next(c[c.index("-filter_complex") + 1] for c in cmds if "medium" in c)
     assert fc.index("scale=453:-2") < fc.index("chromakey=")
     assert m["verde_residual_pct"] < 0.5
+
+
+def test_escenas_en_paralelo_conservan_orden(material, monkeypatch):
+    """Con hilos_escenas=2 al menos dos escenas se renderizan a la vez y el video sale completo y en orden."""
+    import threading
+    import time
+    vivos, maximo, lock = [0], [0], threading.Lock()
+    for nombre in ("_escena_video", "_escena_foto"):
+        orig = getattr(secuencia, nombre)
+
+        def envuelta(e, out, _orig=orig):
+            with lock:
+                vivos[0] += 1
+                maximo[0] = max(maximo[0], vivos[0])
+            try:
+                time.sleep(0.2)
+                _orig(e, out)
+            finally:
+                with lock:
+                    vivos[0] -= 1
+        monkeypatch.setattr(secuencia, nombre, envuelta)
+    tl = secuencia.plan_auto(material, duracion=6)
+    tl["hilos_escenas"] = 2
+    tl["salida"] = "paralelo.mp4"
+    m = qa.medir(secuencia.armar(tl, material))
+    assert maximo[0] == 2
+    assert abs(m["duracion_s"] - 6) < 0.6 and m["negro_s"] == 0

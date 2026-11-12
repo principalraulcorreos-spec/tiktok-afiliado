@@ -43,6 +43,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import platform
 import re
 import shutil
@@ -50,6 +51,7 @@ import subprocess
 import sys
 import tempfile
 import textwrap
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 W, H, FPS = 1080, 1920, 30
@@ -440,6 +442,7 @@ def armar(tl: dict, base_dir: str | Path = ".") -> Path:
         # 1) escenas de fondo
         partes, cortes, t = [], [], 0.0
         dinamico = 0.0
+        trabajos = []
         for i, e in enumerate(tl["escenas"]):
             e = dict(e, src=R(e["src"]))
             if e["tipo"] == "foto" and pres0 and pres0.get("pos", "arriba_derecha").startswith("arriba"):
@@ -447,8 +450,15 @@ def armar(tl: dict, base_dir: str | Path = ".") -> Path:
                 e.setdefault("ancho_foto", 1000)
             if e.get("fondo"):
                 e["fondo"] = R(e["fondo"])
-            o = tmp / f"e{i:03d}.mp4"
-            {"video": _escena_video, "foto": _escena_foto, "recorte": _escena_recorte}[e["tipo"]](e, o)
+            trabajos.append((e, tmp / f"e{i:03d}.mp4"))
+        # cada escena es un ffmpeg independiente: 2 a la vez aprovechan los núcleos que una sola deja libres
+        # ("hilos_escenas": 1 = en serie, como antes). El resultado es idéntico; solo cambia el tiempo.
+        hilos = max(1, int(tl.get("hilos_escenas", min(2, os.cpu_count() or 1))))
+        fn = {"video": _escena_video, "foto": _escena_foto, "recorte": _escena_recorte}
+        with ThreadPoolExecutor(max_workers=hilos) as pool:
+            for f in [pool.submit(fn[e["tipo"]], e, o) for e, o in trabajos]:
+                f.result()
+        for e, o in trabajos:
             d = _dur(o)
             if e["tipo"] == "video":
                 dinamico += d
