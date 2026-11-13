@@ -147,7 +147,7 @@ def test_chroma_se_aplica_ya_escalado(material, tmp_path, monkeypatch):
     tl["salida"] = str(tmp_path / "e.mp4")
     tl["presentadora"] = {"clips": [{"src": "presentadora/r1.mp4", "dur": 3.0, "en": "auto"}]}
     m = qa.medir(secuencia.armar(tl, material))
-    fc = next(c[c.index("-filter_complex") + 1] for c in cmds if "medium" in c)
+    fc = next(c[c.index("-filter_complex") + 1] for c in cmds if "+faststart" in c)
     assert fc.index("scale=453:-2") < fc.index("chromakey=")
     assert m["verde_residual_pct"] < 0.5
 
@@ -177,3 +177,20 @@ def test_escenas_en_paralelo_conservan_orden(material, monkeypatch):
     m = qa.medir(secuencia.armar(tl, material))
     assert maximo[0] == 2
     assert abs(m["duracion_s"] - 6) < 0.6 and m["negro_s"] == 0
+
+
+def test_pasada_final_veryfast_crf17_y_configurable(material, tmp_path, monkeypatch):
+    """Rendimiento (2026-11-13): la pasada final usa veryfast + CRF 17 (igual o mejor SSIM que medium/19 en ~45 %
+    menos tiempo); "preset_final"/"crf_final" en el timeline permiten volver a medium/19."""
+    cmds = []
+    orig = secuencia._run
+    monkeypatch.setattr(secuencia, "_run", lambda c: (cmds.append(c), orig(c))[1])
+    tl = secuencia.plan_auto(material, duracion=3)
+    tl["salida"] = str(tmp_path / "f.mp4")
+    secuencia.armar(tl, material)
+    tl["preset_final"], tl["crf_final"] = "medium", 19
+    tl["salida"] = str(tmp_path / "g.mp4")
+    secuencia.armar(tl, material)
+    finales = [c for c in cmds if "+faststart" in c]
+    par = [(c[c.index("-preset") + 1], c[c.index("-crf") + 1]) for c in finales]
+    assert par == [("veryfast", "17"), ("medium", "19")]

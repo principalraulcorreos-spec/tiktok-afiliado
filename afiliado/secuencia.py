@@ -584,9 +584,13 @@ def armar(tl: dict, base_dir: str | Path = ".") -> Path:
         entradas += ["-i", str(wav)]
         mezcla = [f"[{k + 1}:a]{_loudnorm_2p(wav, i0=i0) if i0 is not None else 'loudnorm=I=-14:TP=-1.5'}[aout]"]
 
+        # el encoder es ~80 % de esta pasada. veryfast + CRF 17 mide igual o mejor que medium + CRF 19 frente a
+        # una referencia sin pérdida (SSIM 0.99741 vs 0.99727, PSNR 48.3 vs 48.3 dB) en ~45 % menos tiempo
+        # (medido 2026-11-13; +9 % de MB). "preset_final"/"crf_final" en el timeline para volver a medium/19.
         _run(["ffmpeg", "-y", "-v", "error", *entradas, "-filter_complex", ";".join(fc + mezcla),
-              "-map", "[vout]", "-map", "[aout]", "-t", f"{D:.3f}", "-c:v", "libx264", "-preset", "medium",
-              "-crf", "19", "-pix_fmt", "yuv420p", "-r", str(FPS), "-c:a", "aac", "-b:a", "192k",
+              "-map", "[vout]", "-map", "[aout]", "-t", f"{D:.3f}", "-c:v", "libx264",
+              "-preset", str(tl.get("preset_final", "veryfast")),
+              "-crf", str(tl.get("crf_final", 17)), "-pix_fmt", "yuv420p", "-r", str(FPS), "-c:a", "aac", "-b:a", "192k",
               "-movflags", "+faststart", str(salida)])
 
     pct = 100 * min(dinamico / D, 1) if D else 0
